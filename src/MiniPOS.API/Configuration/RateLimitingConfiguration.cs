@@ -13,7 +13,7 @@ public static class RateLimitingConfiguration
             options.AddFixedWindowLimiter(RateLimitingConstants.FixedPolicy, opt =>
             {
                 opt.Window = TimeSpan.FromMinutes(1);
-                opt.PermitLimit = 50;
+                opt.PermitLimit = 100;
                 opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
                 opt.QueueLimit = 5;
             });
@@ -25,7 +25,7 @@ public static class RateLimitingConfiguration
                 return RateLimitPartition.GetSlidingWindowLimiter(username, _ => new SlidingWindowRateLimiterOptions
                 {
                     Window = TimeSpan.FromMinutes(1),
-                    PermitLimit = 50,
+                    PermitLimit = 100,
                     SegmentsPerWindow = 6,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                     QueueLimit = 3

@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.User;
+using MiniPOS.API.Authorization;
 using MiniPOS.API.Common.Constants;
 
 namespace MiniPOS.API.Controllers
@@ -10,6 +12,7 @@ namespace MiniPOS.API.Controllers
     [ApiController]
     [Route("api/users")]
     [EnableRateLimiting(RateLimitingConstants.PerUserPolicy)]
+    [Authorize] 
     public class AdminUsersController : BaseApiController
     {
         private readonly IUserRepository _userRepository;
@@ -22,7 +25,7 @@ namespace MiniPOS.API.Controllers
         }
 
         [HttpGet]
-        
+        [HasPermission(Permissions.Users.View)]
         public async Task<ActionResult<IEnumerable<GetUserDto>>> GetAll()
         {
             var result = await _userRepository.GetAllAsync();
@@ -30,6 +33,7 @@ namespace MiniPOS.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission(Permissions.Users.View)]
         public async Task<ActionResult<GetUserDto>> GetById(Guid id)
         {
             var result = await _userRepository.GetByIdAsync(id);
@@ -37,6 +41,7 @@ namespace MiniPOS.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HasPermission(Permissions.Users.Delete)]
         public async Task<ActionResult> Delete(Guid id)
         {
             var result = await _userRepository.DeleteAsync(id);
@@ -44,6 +49,7 @@ namespace MiniPOS.API.Controllers
         }
 
         [HttpPost]
+        [HasPermission(Permissions.Users.Create)]
         public async Task<ActionResult<GetUserDto>> Create([FromBody] CreateUserDto model)
         {
             _logger.LogInformation("Admin {Admin} is creating user {Email}", User?.Identity?.Name, model.Email);
@@ -55,6 +61,7 @@ namespace MiniPOS.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [HasPermission(Permissions.Users.Update)]
         public async Task<ActionResult<GetUserDto>> Update(Guid id, [FromBody] UpdateUserDto model)
         {
             var modifiedBy = User?.Identity?.Name ?? "System";

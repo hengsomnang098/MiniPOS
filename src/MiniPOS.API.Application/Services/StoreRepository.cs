@@ -19,12 +19,14 @@ namespace MiniPOS.Application.Repositories
             _context = context;
             _mapper = mapper;
         }
-        public async Task<Result<GetStoreDto>> CreateAsync(CreateStoreDto createDto)
+        public async Task<Result<GetStoreDto>> CreateAsync(CreateStoreDto createDto, string userId)
         {
             try
             {
 
                 var store = _mapper.Map<Store>(createDto);
+                // assign the authenticated user's id (from controller)
+                store.UserId = userId;
 
                 _context.Stores.Add(store);
                 await _context.SaveChangesAsync();
@@ -43,12 +45,16 @@ namespace MiniPOS.Application.Repositories
             }
         }
 
-        public async Task<Result> DeleteAsync(Guid id)
+        public async Task<Result> DeleteAsync(Guid id, string userId)
         {
             var store = await _context.Stores.FindAsync(id);
             if (store == null)
             {
                 return Result.NotFound(new Error(ErrorCodes.NotFound, "Store not found."));
+            }
+            if (store.UserId != userId)
+            {
+                return Result.Failure(new Error(ErrorCodes.Unauthorized, "You do not have permission to delete this store."));
             }
 
             _context.Stores.Remove(store);
@@ -89,12 +95,14 @@ namespace MiniPOS.Application.Repositories
             return await _context.Stores.AsNoTracking().AnyAsync(s => s.StoreName.ToLower().Trim() == name.ToLower().Trim());
         }
 
-        public async Task<Result> UpdateAsync(Guid id, UpdateStoreDto updateDto)
+        public async Task<Result> UpdateAsync(Guid id, UpdateStoreDto updateDto, string userId)
         {
             if (id != updateDto.Id)
             {
                 return Result.BadRequest(new Error(ErrorCodes.BadRequest, "Mismatched Store ID."));
             }
+
+
 
             var store = await _context.Stores.FindAsync(id);
             if (store == null)
@@ -102,7 +110,13 @@ namespace MiniPOS.Application.Repositories
                 return Result.NotFound(new Error(ErrorCodes.NotFound, $"Store '{id}' not found."));
             }
 
+            if (store.UserId != userId)
+            {
+                return Result.Failure(new Error(ErrorCodes.Unauthorized, "You do not have permission to update this store."));
+            }
+
             _mapper.Map(updateDto, store);
+            store.UserId = userId;
             await _context.SaveChangesAsync();
 
             return Result.Success();

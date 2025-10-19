@@ -7,23 +7,27 @@ namespace MiniPOS.API.Domain
 {
     public static class IdentitySeeder
     {
+        /// <summary>
+        /// Idempotent seeding for roles, permissions, role-permissions and a default super-admin user.
+        /// Safe to run multiple times.
+        /// </summary>
         public static async Task SeedAsync(IServiceProvider services)
         {
             var roleManager = services.GetRequiredService<RoleManager<ApplicationRole>>();
             var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
             var db = services.GetRequiredService<ApplicationDbContext>();
 
-            // ✅ 1. Define fixed roles (use stable GUIDs for consistency)
-            var roles = new List<ApplicationRole>
+            // 1. Ensure fixed roles exist (use stable GUIDs to keep consistency)
+            var roles = new[]
             {
-                new()
+                new ApplicationRole
                 {
                     Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     Name = "Super Admin",
                     NormalizedName = "SUPER ADMIN",
                     Description = "Full system access"
                 },
-                new()
+                new ApplicationRole
                 {
                     Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
                     Name = "Staff",
@@ -32,91 +36,79 @@ namespace MiniPOS.API.Domain
                 }
             };
 
-            // ✅ 2. Seed Roles
             foreach (var role in roles)
             {
-                if (!await roleManager.Roles.AnyAsync(r => r.Id == role.Id))
+                var exists = await roleManager.Roles.AnyAsync(r => r.Id == role.Id || r.NormalizedName == role.NormalizedName);
+                if (!exists)
                 {
-                    await roleManager.CreateAsync(role);
+                    var result = await roleManager.CreateAsync(role);
+                    if (!result.Succeeded)
+                    {
+                        var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                        throw new Exception($"Failed to create role '{role.Name}': {errors}");
+                    }
                 }
             }
 
-            // ✅ 3. Seed Permissions (if empty)
-            if (!await db.Permissions.AnyAsync())
+            // 2. Define permissions (single source of truth)
+            var permissionNames = new[]
             {
-                db.Permissions.AddRange(
-                    // Users
-                    new Permission { Name = "Users.View" },
-                    new Permission { Name = "Users.Edit" },
-                    new Permission { Name = "Users.Create" },
-                    new Permission { Name = "Users.Delete" },
+                // Categories
+                "Categories.View", "Categories.Create", "Categories.Update", "Categories.Delete",
+                // Stores
+                "Stores.View", "Stores.Create", "Stores.Update", "Stores.Delete",
+                // Users
+                "Users.View", "Users.Create", "Users.Update", "Users.Delete"
+            };
 
-                    // Stores
-                    new Permission { Name = "Stores.View" },
-                    new Permission { Name = "Stores.Edit" },
-                    new Permission { Name = "Stores.Create" },
-                    new Permission { Name = "Stores.Delete" },
-
-                    // Categories
-                    new Permission { Name = "Categories.View" },
-                    new Permission { Name = "Categories.Edit" },
-                    new Permission { Name = "Categories.Create" },
-                    new Permission { Name = "Categories.Delete" }
-                );
-
+            // Seed permissions if missing
+            var existingPermissions = await db.Permissions.Select(p => p.Name).ToListAsync();
+            var missing = permissionNames.Except(existingPermissions, StringComparer.OrdinalIgnoreCase).ToList();
+            if (missing.Any())
+            {
+                var toAdd = missing.Select(n => new Permission { Name = n }).ToList();
+                await db.Permissions.AddRangeAsync(toAdd);
                 await db.SaveChangesAsync();
             }
 
-            // ✅ 4. Seed RolePermissions
-            if (!await db.RolePermissions.AnyAsync())
+            // 3. Seed RolePermissions idempotently
+            var superAdminRole = await roleManager.FindByNameAsync("Super Admin");
+            var staffRole = await roleManager.FindByNameAsync("Staff");
+            if (superAdminRole == null || staffRole == null)
             {
-                var superAdminRole = await roleManager.FindByNameAsync("Super Admin");
-                var staffRole = await roleManager.FindByNameAsync("Staff");
-                var permissions = await db.Permissions.ToListAsync();
-                var rolePermissions = new List<RolePermission>();
-
-                // Super Admin gets all
-                if (superAdminRole != null)
-                {
-                    foreach (var permission in permissions)
-                    {
-                        rolePermissions.Add(new RolePermission
-                        {
-                            RoleId = superAdminRole.Id,
-                            PermissionId = permission.Id
-                        });
-                    }
-                }
-
-                // Staff gets limited
-                if (staffRole != null)
-                {
-                    var staffPermissionNames = new[] { "Stores.View", "Categories.View" };
-                    foreach (var name in staffPermissionNames)
-                    {
-                        var perm = permissions.FirstOrDefault(p => p.Name == name);
-                        if (perm != null)
-                        {
-                            rolePermissions.Add(new RolePermission
-                            {
-                                RoleId = staffRole.Id,
-                                PermissionId = perm.Id
-                            });
-                        }
-                    }
-                }
-
-                db.RolePermissions.AddRange(rolePermissions);
-                await db.SaveChangesAsync();
+                throw new Exception("Roles not found after creation. Aborting seeding.");
             }
 
-            // ✅ 5. Seed Super Admin user
+            var allPermissions = await db.Permissions.ToListAsync();
+
+            // Helper to add missing role-permissions
+            async Task AddMissingRolePermissionsAsync(Guid roleId, IEnumerable<Guid> permissionIds)
+            {
+                var existing = await db.RolePermissions
+                    .Where(rp => rp.RoleId == roleId && permissionIds.Contains(rp.PermissionId))
+                    .Select(rp => rp.PermissionId)
+                    .ToListAsync();
+
+                var toInsert = permissionIds.Except(existing).Select(pid => new RolePermission { RoleId = roleId, PermissionId = pid });
+                if (toInsert.Any())
+                {
+                    await db.RolePermissions.AddRangeAsync(toInsert);
+                }
+            }
+
+            // Super Admin gets all permissions
+            await AddMissingRolePermissionsAsync(superAdminRole.Id, allPermissions.Select(p => p.Id));
+
+            // Staff gets view access for Stores and Categories
+            var staffPermissionIds = allPermissions.Where(p => p.Name.StartsWith("Stores.") || p.Name.StartsWith("Categories.")).Select(p => p.Id);
+            await AddMissingRolePermissionsAsync(staffRole.Id, staffPermissionIds);
+
+            // Persist any new RolePermissions
+            await db.SaveChangesAsync();
+
+            // 4. Seed Super Admin user
             var adminEmail = "superadmin@gmail.com";
             var admin = await userManager.FindByEmailAsync(adminEmail);
-            var superAdminRoleEntity = await roleManager.FindByNameAsync("Super Admin");
-
-            if (superAdminRoleEntity == null)
-                throw new Exception("Super Admin role not found — seeding roles failed.");
 
             if (admin == null)
             {
@@ -127,7 +119,7 @@ namespace MiniPOS.API.Domain
                     UserName = adminEmail,
                     Email = adminEmail,
                     EmailConfirmed = true,
-                    RoleId = superAdminRoleEntity.Id // ✅ Assign directly
+                    RoleId = superAdminRole.Id
                 };
 
                 var createResult = await userManager.CreateAsync(adminUser, "Admin@123");
@@ -139,16 +131,13 @@ namespace MiniPOS.API.Domain
             }
             else
             {
-                // ✅ Ensure role is still linked correctly
-                if (admin.RoleId != superAdminRoleEntity.Id)
+                // Ensure RoleId is correct
+                if (admin.RoleId != superAdminRole.Id)
                 {
-                    admin.RoleId = superAdminRoleEntity.Id;
+                    admin.RoleId = superAdminRole.Id;
                     await userManager.UpdateAsync(admin);
                 }
             }
-
-            // ✅ 6. Optional: Add system claims (if needed later)
-            // await userManager.AddClaimAsync(admin, new Claim("Permission", "Users.View"));
         }
     }
 }

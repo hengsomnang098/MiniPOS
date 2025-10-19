@@ -25,7 +25,7 @@ namespace MiniPOS.API.Controllers
                 ErrorCodes.BadRequest => BadRequest(e.Description),
                 ErrorCodes.Conflict => Conflict(e.Description),
                 ErrorCodes.Unauthorized => Unauthorized(e.Description),
-                ErrorCodes.Forbidden => Forbid(e.Description),
+                ErrorCodes.Forbidden => StatusCode(403, e.Description),
                 _ => Problem(detail: string.Join("; ", errors.Select(x => x.Description)), title: e.Code)
             };
         }

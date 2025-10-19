@@ -18,10 +18,12 @@ try
     builder.Services
         .AddDatabaseConfiguration(builder.Configuration)
         .AddAuthenticationConfiguration(builder.Configuration)
-        .AddAuthorizationConfiguration()
         .AddApplicationServices()
         .AddRateLimitingConfiguration()
         .AddSwaggerConfiguration();
+
+    // Add authorization configuration separately to avoid ambiguity
+    AuthorizationConfiguration.AddAuthorizationConfiguration(builder.Services);
 
     var app = builder.Build();
 
@@ -29,11 +31,13 @@ try
     app.UseSerilogRequestLogging();
 
     // Configure the HTTP request pipeline.
-    if (app.Environment.IsDevelopment())
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
     {
-        app.UseSwagger();
-        app.UseSwaggerUI();
-    }
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "MiniPOS API v1");
+        options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+        
+    });
 
     app.UseHttpsRedirection();
     app.UseRateLimiter();

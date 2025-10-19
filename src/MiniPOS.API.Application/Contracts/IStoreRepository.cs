@@ -13,8 +13,8 @@ namespace MiniPOS.API.Application.Contracts
         Task<bool> StoreExistAsync(string name);
         Task<Result<IEnumerable<GetStoreDto>>> GetAllAsync();
         Task<Result<GetStoreDto>> GetDetailsAsync(Guid id);
-        Task<Result<GetStoreDto>> CreateAsync(CreateStoreDto createDto);
-        Task<Result> UpdateAsync(Guid id, UpdateStoreDto updateDto);
-        Task<Result> DeleteAsync(Guid id);
+        Task<Result<GetStoreDto>> CreateAsync(CreateStoreDto createDto, string userId);
+        Task<Result> UpdateAsync(Guid id, UpdateStoreDto updateDto, string userId);
+        Task<Result> DeleteAsync(Guid id, string userId);
     }
 }

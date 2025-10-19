@@ -1,420 +1,220 @@
-# 🏪 MiniPOS - Point of Sale System
+# MiniPOS
 
-A modern, scalable Point of Sale (POS) system built with **ASP.NET Core 9.0** following Clean Architecture principles. This project demonstrates enterprise-level development practices with JWT authentication, Entity Framework Core, PostgreSQL, and comprehensive logging with Serilog.
+MiniPOS is a small ASP.NET Core Web API for a minimal point-of-sale system. It uses:
 
-[![.NET](https://img.shields.io/badge/.NET-9.0-purple.svg)](https://dotnet.microsoft.com/download/dotnet/9.0)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://www.postgresql.org/)
-[![Entity Framework](https://img.shields.io/badge/Entity%20Framework-9.0-green.svg)](https://docs.microsoft.com/en-us/ef/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+- .NET 9 (net9.0)
+- Entity Framework Core with Npgsql (PostgreSQL)
+- ASP.NET Core Identity for authentication/authorization
+- Serilog for logging
+- Swagger (Swashbuckle) for API documentation
 
-## 🏗️ Project Architecture
+This README explains how to set up the project from scratch on macOS (or Linux/Windows with analogous steps), run it with Docker for the database, apply EF migrations, and start the application.
 
-This project implements **Clean Architecture** with clear separation of concerns across multiple layers:
+## Folder structure
 
-- **MiniPOS.API** - Presentation Layer (Controllers, API endpoints)
-- **MiniPOS.API.Application** - Application Layer (Business logic, DTOs, Services)
-- **MiniPOS.API.Domain** - Domain Layer (Entities, Database context)
-- **MiniPOS.API.Common** - Cross-cutting concerns (Constants, Results, Utilities)
+Below is a concise tree of the repository and a short description of the important files and folders. Paths are relative to the repository root.
 
-## 📁 Project Structure
-
-```
-MiniPOS/
-├── docker-compose.yml                  # PostgreSQL containerization
-├── MiniPOS.sln                        # Solution file
-├── README.md                          # Project documentation
-├── .gitignore                         # Git ignore rules
-└── src/
-    ├── MiniPOS.API/                   # 🎯 Presentation Layer
-    │   ├── Program.cs                 # Application entry point & DI setup
-    │   ├── MiniPOS.API.csproj         # Project dependencies
-    │   ├── appsettings.json           # Production configuration
-    │   ├── appsettings.Development.json # Development settings
-    │   │
-    │   ├── Controllers/               # REST API Controllers
-    │   │   ├── BaseApiController.cs   # Base controller with common functionality
-    │   │   ├── AuthController.cs      # Authentication endpoints
-    │   │   ├── AdminUsersController.cs # User management
-    │   │   ├── CategoryController.cs  # Category CRUD operations
-    │   │   └── StoreController.cs     # Store management
-    │   │
-    │   ├── MappingProfiles/           # AutoMapper configurations
-    │   │   └── MappingProfiles.cs     # Entity ↔ DTO mappings
-    │   │
-    │   ├── Properties/                # Launch settings
-    │   │   └── launchSettings.json    # Development profiles
-    │   │
-    │   └── logs/                      # Serilog output directory
-    │
-    ├── MiniPOS.API.Application/       # 💼 Application Layer
-    │   ├── MiniPOS.API.Application.csproj
-    │   │
-    │   ├── Contracts/                 # Repository interfaces
-    │   │   ├── IAuthRepository.cs     # Authentication contract
+```text
+.
+├── docker-compose.yml                # Postgres service for local dev
+├── MiniPOS.sln                      # Visual Studio solution
+└── src
+    ├── MiniPOS.API                  # Web API project
+    │   ├── Program.cs               # Main application entry point and configuration
+    │   ├── appsettings.json         # Production configuration settings
+    │   ├── appsettings.Development.json # Development configuration settings
+    │   ├── MiniPOS.API.csproj       # Project file with dependencies
+    │   ├── Authorization/           # Permission handling and authorization
+    │   │   ├── HasPermissionAttribute.cs    # Custom permission attribute
+    │   │   ├── PermissionAuthorizationHandler.cs # Permission handler logic
+    │   │   └── Permissions.cs       # Permission constants and definitions
+    │   ├── Configuration/           # DI extension methods and configuration
+    │   │   ├── AuthenticationConfiguration.cs # JWT authentication setup
+    │   │   ├── AuthorizationConfiguration.cs  # Authorization policies
+    │   │   ├── DatabaseConfiguration.cs       # EF Core and DB setup
+    │   │   ├── LoggingConfiguration.cs        # Serilog configuration
+    │   │   ├── RateLimitingConfiguration.cs   # API rate limiting
+    │   │   ├── ServiceConfiguration.cs        # DI service registration
+    │   │   └── SwaggerConfiguration.cs        # API documentation setup
+    │   ├── Controllers/             # MVC/WebAPI controllers
+    │   │   ├── AdminUsersController.cs        # User management endpoints
+    │   │   ├── AuthController.cs              # Authentication endpoints
+    │   │   ├── BaseApiController.cs           # Base controller with common functionality
+    │   │   ├── CategoryController.cs          # Category management
+    │   │   └── StoreController.cs             # Store management
+    │   ├── Properties/launchSettings.json # Development server settings
+    │   └── logs/                    # Serilog file sink output (local)
+    ├── MiniPOS.API.Domain           # Domain models & DbContext
+    │   ├── ApplicationDbContext.cs  # EF Core DB context
+    │   ├── ApplicationUser.cs       # Custom Identity user
+    │   ├── ApplicationRole.cs       # Custom Identity role
+    │   ├── BaseEntity.cs            # Base class for all entities
+    │   ├── Category.cs              # Category entity
+    │   ├── Permission.cs            # Permission entity
+    │   ├── RolePermission.cs        # Role-Permission mapping
+    │   ├── Store.cs                 # Store entity
+    │   ├── DatabaseInitializer.cs   # Initial data seeding
+    │   ├── IdentitySeeder.cs        # Identity roles and users seeding
+    │   └── Migrations/              # EF Core migrations
+    ├── MiniPOS.API.Application      # Application layer (services, DTOs, mapping)
+    │   ├── Contracts/               # Repository/service interfaces
+    │   │   ├── IAuthRepository.cs   # Authentication interface
     │   │   ├── ICategoryRepository.cs # Category operations
-    │   │   ├── IStoreRepository.cs    # Store management
-    │   │   └── IUserRepository.cs     # User operations
-    │   │
-    │   ├── Services/                  # Repository implementations
-    │   │   ├── AuthRepository.cs      # JWT authentication logic
-    │   │   ├── CategoryRepository.cs  # Category business logic
-    │   │   ├── StoreRepository.cs     # Store operations
-    │   │   └── UserRepository.cs      # User management logic
-    │   │
-    │   └── DTOs/                      # Data Transfer Objects
-    │       ├── Auth/                  # Authentication DTOs
-    │       │   ├── AuthResponseDto.cs # Login response
-    │       │   ├── LoginUserDto.cs    # Login request
-    │       │   └── UserInfoDto.cs     # User info response
-    │       ├── Category/              # Category DTOs
-    │       │   ├── CreateCategoryDto.cs
-    │       │   ├── GetCategoryDto.cs
-    │       │   └── UpdateCategoryDto.cs
-    │       ├── Store/                 # Store DTOs
-    │       │   ├── CreateStoreDto.cs
-    │       │   ├── GetStoreDto.cs
-    │       │   └── UpdateStoreDto.cs
-    │       └── User/                  # User DTOs
-    │           ├── CreateUserDto.cs
-    │           ├── GetUserDto.cs
-    │           └── UpdateUserDto.cs
-    │
-    ├── MiniPOS.API.Domain/            # 🗄️ Domain Layer
-    │   ├── MiniPOS.API.Domain.csproj
-    │   ├── ApplicationDbContext.cs    # EF Core database context
-    │   ├── BaseEntity.cs              # Base entity with common properties
-    │   ├── DatabaseInitializer.cs     # Database setup & seeding
-    │   ├── IdentitySeeder.cs          # Default user/role seeding
-    │   │
-    │   ├── Entities/                  # Domain entities
-    │   │   ├── ApplicationUser.cs     # Extended IdentityUser
-    │   │   ├── ApplicationRole.cs     # Extended IdentityRole
-    │   │   ├── Category.cs            # Product categories
-    │   │   ├── Store.cs               # Store management
-    │   │   ├── Permission.cs          # System permissions
-    │   │   └── RolePermission.cs      # Role-Permission mapping
-    │   │
-    │   └── Migrations/                # EF Core migrations
-    │       ├── 20251019083325_InitialCreate.cs
-    │       ├── 20251019083325_InitialCreate.Designer.cs
-    │       └── ApplicationDbContextModelSnapshot.cs
-    │
-    └── MiniPOS.API.Common/            # 🔧 Common Layer
-        ├── MiniPOS.API.Common.csproj
-        │
-        ├── Constants/                 # Application constants
-        │   ├── ErrorCodes.cs          # Standardized error codes
-        │   └── RateLimitingConstants.cs # Rate limiting settings
-        │
-        └── Results/                   # Custom result patterns
-            └── Results.cs             # Result<T> pattern implementation
+    │   │   ├── IStoreRepository.cs  # Store operations
+    │   │   └── IUserRepository.cs   # User management
+    │   ├── DTOs/                    # Data Transfer Objects
+    │   │   ├── Auth/               # Authentication DTOs
+    │   │   ├── Category/           # Category DTOs
+    │   │   ├── Store/             # Store DTOs
+    │   │   └── User/              # User DTOs
+    │   ├── MappingProfiles/        # AutoMapper configurations
+    │   │   └── MappingProfiles.cs  # Entity-DTO mappings
+    │   └── Services/               # Repository implementations
+    │       └── AuthRepository.cs   # Authentication service implementation
+    └── MiniPOS.API.Common           # Shared helpers, results, constants
+        ├── Constants/              # Application-wide constants
+        └── Results/               # Standardized API response types
 ```
 
-## 🚀 Features
+## Key Files
 
-### 🔐 Security & Authentication
-- **JWT Bearer Authentication** with refresh tokens
-- **Role-based Authorization** with granular permissions
-- **ASP.NET Core Identity** integration
-- **Password complexity requirements**
-- **Rate limiting** for API protection
+- `src/MiniPOS.API/Program.cs` — app startup, swagger, logging, middleware and DB seeding call
+- `src/MiniPOS.API/Configuration/DatabaseConfiguration.cs` — registers `ApplicationDbContext` and reads connection string configuration
+- `src/MiniPOS.API.Domain/ApplicationDbContext.cs` — EF Core DbContext and fluent model configuration
+- `src/MiniPOS.API.Domain/Migrations/` — where EF migrations live if they're committed
+- `docker-compose.yml` — brings up a `postgres` service on `5432` by default
 
-### 💾 Data Management
-- **PostgreSQL** database with Entity Framework Core
-- **Repository pattern** for data access
-- **Database migrations** for schema versioning
-- **Automatic seeding** of default data
+## Project Dependencies
 
-### 🔧 Development Features
-- **Clean Architecture** with clear separation of concerns
-- **AutoMapper** for object mapping
-- **Serilog** for structured logging
-- **Swagger/OpenAPI** documentation
-- **Docker Compose** for local development
-- **Hot reload** development experience
+The solution uses the following key NuGet packages:
 
-### 📊 Business Features
-- **Multi-store management**
-- **Category organization**
-- **User management with roles**
-- **Comprehensive audit logging**
+- `AutoMapper` (12.0.1) - Object-to-object mapping
+- `AutoMapper.Extensions.Microsoft.DependencyInjection` (12.0.1) - DI integration for AutoMapper
+- `Microsoft.AspNetCore.Authentication.JwtBearer` (9.0.10) - JWT authentication
+- `Microsoft.AspNetCore.Identity.EntityFrameworkCore` (9.0.10) - Identity framework
+- `Microsoft.EntityFrameworkCore.Design` (9.0.10) - EF Core design-time tools
+- `Microsoft.EntityFrameworkCore.Tools` (9.0.10) - EF Core CLI tools
+- `Npgsql.EntityFrameworkCore.PostgreSQL` (9.0.4) - PostgreSQL provider for EF Core
+- `Serilog.AspNetCore` (9.0.0) - Structured logging
+- `Serilog.Sinks.Console` (6.0.0) - Console logging
+- `Swashbuckle.AspNetCore` (6.5.0) - Swagger/OpenAPI documentation
 
-## 🛠️ Technology Stack
+## Recommended Improvements
 
-| Category | Technology | Version |
-|----------|------------|---------|
-| **Framework** | ASP.NET Core | 9.0 |
-| **Database** | PostgreSQL | 15+ |
-| **ORM** | Entity Framework Core | 9.0 |
-| **Authentication** | JWT Bearer | - |
-| **Mapping** | AutoMapper | 12.0.1 |
-| **Logging** | Serilog | 9.0.0 |
-| **API Documentation** | Swagger/OpenAPI | 9.0.6 |
-| **Containerization** | Docker Compose | - |
+- Add `src/MiniPOS.API/Dockerfile` and extend `docker-compose.yml` for full containerization
+- Add a `.gitignore` to exclude `bin/`, `obj/`, user secrets, and local logs
+- Commit EF Core migrations for easier deployment and development
+- Add a `tests/` project (example: `MiniPOS.Tests`) with unit tests
+- Add helper scripts (`scripts/dev-up.sh`) or a `Makefile` for common tasks
 
-### 📦 Key Dependencies
 
-```xml
-<PackageReference Include="AutoMapper" Version="12.0.1" />
-<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
-<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
-<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.10" />
-<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10" />
-<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10" />
-<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-<PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
-<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
-<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
-```
+## Prerequisites
 
-## 📋 Prerequisites
-
-Before creating this project, ensure you have:
-
-- **[.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)** - Latest version
-- **[Docker Desktop](https://www.docker.com/products/docker-desktop)** - For PostgreSQL
-- **[Git](https://git-scm.com/)** - Version control
-- **[Visual Studio Code](https://code.visualstudio.com/)** or **[Visual Studio 2022](https://visualstudio.microsoft.com/)**
-- **[C# Extension](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csharp)** (for VS Code)
-
-## 🎯 How to Create This Project from Scratch
-
-Follow this step-by-step guide to recreate the MiniPOS project:
-
-### 1️⃣ Project Initialization
+- .NET 9 SDK installed (required to build & run the projects)
+  - macOS: install via `brew install --cask dotnet` or from <https://dotnet.microsoft.com>
+- Docker & Docker Compose (for running PostgreSQL locally): <https://docs.docker.com/get-docker/>
+- dotnet-ef tool (to run migrations):
 
 ```bash
-# Create solution and project structure
-mkdir MiniPOS && cd MiniPOS
+dotnet tool install --global dotnet-ef --version 9.*
+```
+
+If already installed, update with:
+
+```bash
+dotnet tool update --global dotnet-ef --version 9.*
+```
+
+## Creating the Project from Scratch
+
+1. Create the solution and projects:
+
+```bash
+# Create solution
 dotnet new sln -n MiniPOS
 
-# Create the main projects
-mkdir src && cd src
-
-# Create API project (Web API)
-dotnet new webapi -n MiniPOS.API -f net9.0
-dotnet sln ../MiniPOS.sln add MiniPOS.API/MiniPOS.API.csproj
-
-# Create class library projects
-dotnet new classlib -n MiniPOS.API.Domain -f net9.0
-dotnet new classlib -n MiniPOS.API.Application -f net9.0
-dotnet new classlib -n MiniPOS.API.Common -f net9.0
+# Create projects
+dotnet new webapi -n MiniPOS.API -o src/MiniPOS.API
+dotnet new classlib -n MiniPOS.API.Domain -o src/MiniPOS.API.Domain
+dotnet new classlib -n MiniPOS.API.Application -o src/MiniPOS.API.Application
+dotnet new classlib -n MiniPOS.API.Common -o src/MiniPOS.API.Common
 
 # Add projects to solution
-dotnet sln ../MiniPOS.sln add MiniPOS.API.Domain/MiniPOS.API.Domain.csproj
-dotnet sln ../MiniPOS.sln add MiniPOS.API.Application/MiniPOS.API.Application.csproj
-dotnet sln ../MiniPOS.sln add MiniPOS.API.Common/MiniPOS.API.Common.csproj
+dotnet sln add src/MiniPOS.API/MiniPOS.API.csproj
+dotnet sln add src/MiniPOS.API.Domain/MiniPOS.API.Domain.csproj
+dotnet sln add src/MiniPOS.API.Application/MiniPOS.API.Application.csproj
+dotnet sln add src/MiniPOS.API.Common/MiniPOS.API.Common.csproj
+```
 
-# Set up project references
-cd MiniPOS.API
+2. Add project references:
+
+```bash
+# API project dependencies
+cd src/MiniPOS.API
 dotnet add reference ../MiniPOS.API.Domain/MiniPOS.API.Domain.csproj
 dotnet add reference ../MiniPOS.API.Application/MiniPOS.API.Application.csproj
 dotnet add reference ../MiniPOS.API.Common/MiniPOS.API.Common.csproj
 
+# Application layer dependencies
 cd ../MiniPOS.API.Application
 dotnet add reference ../MiniPOS.API.Domain/MiniPOS.API.Domain.csproj
 dotnet add reference ../MiniPOS.API.Common/MiniPOS.API.Common.csproj
-
-cd ../MiniPOS.API.Domain
-dotnet add reference ../MiniPOS.API.Common/MiniPOS.API.Common.csproj
 ```
 
-### 2️⃣ Install NuGet Packages
+3. Install required NuGet packages:
 
 ```bash
-# Navigate to API project
-cd ../MiniPOS.API
-
-# Add core packages
+# Domain project packages
+cd ../MiniPOS.API.Domain
 dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore --version 9.0.10
+dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL --version 9.0.4
+
+# Application project packages
+cd ../MiniPOS.API.Application
+dotnet add package AutoMapper --version 12.0.1
+dotnet add package AutoMapper.Extensions.Microsoft.DependencyInjection --version 12.0.1
+
+# API project packages
+cd ../MiniPOS.API
 dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer --version 9.0.10
 dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.10
 dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.10
-dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL --version 9.0.4
-dotnet add package AutoMapper --version 12.0.1
-dotnet add package AutoMapper.Extensions.Microsoft.DependencyInjection --version 12.0.1
-dotnet add package System.IdentityModel.Tokens.Jwt --version 8.14.0
-dotnet add package Swashbuckle.AspNetCore --version 9.0.6
-
-# Add Serilog packages
 dotnet add package Serilog.AspNetCore --version 9.0.0
 dotnet add package Serilog.Sinks.Console --version 6.0.0
-dotnet add package Serilog.Sinks.File --version 7.0.0
+dotnet add package Swashbuckle.AspNetCore --version 6.5.0
 ```
 
-### 3️⃣ Create Domain Entities
-
-Create the following files in `MiniPOS.API.Domain/`:
-
-**BaseEntity.cs**
-```csharp
-namespace MiniPOS.API.Domain
-{
-    public class BaseEntity
-    {
-        public Guid Id { get; set; }
-    }
-}
-```
-
-**ApplicationUser.cs**, **ApplicationRole.cs**, **Category.cs**, **Store.cs**, **Permission.cs**, **RolePermission.cs**
-
-### 4️⃣ Set Up Database Context
-
-Create `ApplicationDbContext.cs` in the Domain project with DbContext configuration.
-
-### 5️⃣ Create DTOs
-
-Set up Data Transfer Objects in `MiniPOS.API.Application/DTOs/` for each entity.
-
-### 6️⃣ Implement Repository Pattern
-
-Create interfaces in `Contracts/` and implementations in `Services/`.
-
-### 7️⃣ Configure Services in Program.cs
-
-Set up dependency injection, authentication, database, AutoMapper, and Serilog.
-
-### 8️⃣ Create Controllers
-
-Implement API controllers for each entity with full CRUD operations.
-
-### 9️⃣ Database Setup
+4. Create the project structure:
 
 ```bash
-# Create Docker Compose file for PostgreSQL
-# Add connection strings to appsettings.json
-# Run migrations
-dotnet ef migrations add InitialCreate
-dotnet ef database update
+# Create directory structure in API project
+cd ../MiniPOS.API
+mkdir Authorization Configuration 
+
+
+# Create directory structure in Application project
+cd ../MiniPOS.API.Application
+mkdir Contracts DTOs MappingProfiles Services
+mkdir DTOs/Auth DTOs/Category DTOs/Store DTOs/User
+
+# Create directory structure in Common project
+cd ../MiniPOS.API.Common
+mkdir Constants Results
 ```
 
-### 🔟 Configure Logging
+5. Set up Docker for PostgreSQL:
 
-Set up Serilog in `Program.cs` and configuration files.
-
-## ⚡ Quick Start
-
-### 1. Clone Repository
-```bash
-git clone https://github.com/hengsomnang098/MiniPOS.git
-cd MiniPOS
-```
-
-### 2. Start Database
-```bash
-docker-compose up -d
-```
-
-### 3. Configure Connection String
-Update `appsettings.Development.json`:
-```json
-{
-  "ConnectionStrings": {
-    "HotelListingDbConnectionString": "Host=localhost;Port=5432;Database=MiniPOS;Username=postgres;Password=postgrespw"
-  }
-}
-```
-
-### 4. Run Database Migrations
-```bash
-cd src/MiniPOS.API
-dotnet ef database update
-```
-
-### 5. Start Application
-```bash
-dotnet run
-# or for hot reload
-dotnet watch
-```
-
-### 6. Access the Application
-- **API**: `https://localhost:5001` or `http://localhost:5000`
-- **Swagger UI**: `https://localhost:5001/swagger`
-
-## 📡 API Endpoints
-
-### 🔐 Authentication
-- `POST /api/Auth/login` - User authentication
-- `POST /api/Auth/refresh` - Refresh JWT token
-
-### 👥 User Management
-- `GET /api/adminusers` - List all users
-- `POST /api/adminusers` - Create new user
-- `PUT /api/adminusers/{id}` - Update user
-- `DELETE /api/adminusers/{id}` - Delete user
-
-### 📂 Categories
-- `GET /api/category` - Get all categories
-- `POST /api/category` - Create category
-- `PUT /api/category/{id}` - Update category
-- `DELETE /api/category/{id}` - Delete category
-
-### 🏪 Stores
-- `GET /api/store` - Get all stores
-- `POST /api/store` - Create store
-- `PUT /api/store/{id}` - Update store
-- `DELETE /api/store/{id}` - Delete store
-
-## 🔧 Development
-
-### Hot Reload Development
-```bash
-cd src/MiniPOS.API
-dotnet watch
-```
-
-### Database Migrations
-```bash
-# Add new migration
-dotnet ef migrations add MigrationName
-
-# Update database
-dotnet ef database update
-
-# Remove last migration (if not applied)
-dotnet ef migrations remove
-```
-
-### Testing
-```bash
-dotnet test
-```
-
-## 🌐 Configuration
-
-### Environment Variables
-- `ASPNETCORE_ENVIRONMENT` - Development/Production
-- `ConnectionStrings__HotelListingDbConnectionString` - Database connection
-
-### Serilog Configuration
-Configured in `appsettings.json` with console and file sinks:
-- **Console**: Formatted for development
-- **File**: Daily rolling logs in `logs/` directory
-
-### JWT Configuration
-```json
-{
-  "JwtSettings": {
-    "Key": "YourSuperSecretKey123456789012345678901234567890123456789",
-    "Issuer": "MiniPOS",
-    "Audience": "MiniPOSUsers",
-    "DurationInMinutes": 60
-  }
-}
-```
-
-## 🐳 Docker Support
+Create a `docker-compose.yml` file in the root directory:
 
 ```yaml
+version: '3.8'
 services:
   postgres:
     image: postgres:latest
     environment:
-      - POSTGRES_PASSWORD=postgrespw
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespw
+      POSTGRES_DB: MiniPOS
     ports:
       - "5432:5432"
     volumes:
@@ -424,489 +224,218 @@ volumes:
   postgres_data:
 ```
 
-## 🧪 Testing & Development Tools
-
-- **Swagger UI** - Interactive API documentation
-- **Serilog** - Structured logging with file and console output
-- **Hot Reload** - Real-time development updates
-- **Entity Framework Tools** - Database management
-
-## 📊 Database Schema
-
-### Core Tables
-- **AspNetUsers** - User authentication (Identity)
-- **AspNetRoles** - User roles (Identity)
-- **Stores** - Store management
-- **Categories** - Product categories
-- **Permissions** - System permissions
-- **RolePermissions** - Role-permission mapping
-
-### Relationships
-```
-ApplicationUser ──┐
-                  ├── ApplicationRole ──── RolePermission ──── Permission
-                  │
-                  └── Store ──── Category
-```
-
-## 🔒 Security Features
-
-- **JWT Authentication** with configurable expiration
-- **Role-based authorization** with fine-grained permissions
-- **Password complexity** requirements
-- **Rate limiting** for API protection
-- **CORS** configuration for cross-origin requests
-- **Input validation** through DTOs
-- **Secure password hashing** via Identity
-
-## 📝 Contributing
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add some amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-## 📄 License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-## 👨‍💻 Author
-
-**Heng Somnang**
-- GitHub: [@hengsomnang098](https://github.com/hengsomnang098)
-- Email: hengsomnang098@gmail.com
-
-## 🙏 Acknowledgments
-
-- **ASP.NET Core Team** - For the excellent framework
-- **Entity Framework Core** - For powerful ORM capabilities
-- **PostgreSQL Community** - For reliable database system
-- **Serilog Team** - For structured logging
-- **AutoMapper** - For seamless object mapping
-
----
-
-**Built with ❤️ using ASP.NET Core 9.0**
-
-*This project demonstrates modern .NET development practices with Clean Architecture, comprehensive security, and production-ready logging.*
-        │   ├── Store.cs
-        │   ├── Permission.cs
-        │   ├── RolePermission.cs
-        │   └── Seed/               # Database seeding
-        │       ├── DatabaseInitializer.cs
-        │       └── IdentitySeeder.cs
-        │
-        ├── DTOs/                   # Data Transfer Objects
-        │   ├── Auth/
-        │   │   ├── AuthResponseDto.cs
-        │   │   ├── LoginUserDto.cs
-        │   │   └── UserInfoDto.cs
-        │   ├── Category/
-        │   │   ├── CreateCategoryDto.cs
-        │   │   ├── GetCategoryDto.cs
-        │   │   └── UpdateCategoryDto.cs
-        │   ├── Store/
-        │   │   ├── CreateStoreDto.cs
-        │   │   ├── GetStoreDto.cs
-        │   │   └── UpdateStoreDto.cs
-        │   └── User/
-        │       ├── CreateUserDto.cs
-        │       ├── GetUserDto.cs
-        │       └── UpdateUserDto.cs
-        │
-        ├── MappingProfiles/        # AutoMapper profiles
-        │   └── MappingProfiles.cs
-        │
-        ├── Constants/              # Application constants
-        │   └── ErrorCodes.cs
-        │
-        ├── Results/                # Custom result types
-        │   └── Results.cs
-        │
-        └── Migrations/             # Entity Framework migrations
-            ├── 20251019072715_IdentityInit.cs
-            ├── 20251019072715_IdentityInit.Designer.cs
-            └── ApplicationDbContextModelSnapshot.cs
-
-## 🚀 Features
-
-### Core Functionality
-
-- **Authentication & Authorization**: JWT-based authentication with role-based access control
-- **User Management**: Complete user lifecycle management with role assignments
-- **Store Management**: Multi-store support with comprehensive store operations
-- **Category Management**: Product category organization and management
-- **Database Integration**: PostgreSQL with Entity Framework Core
-
-### Technical Features
-
-- **Clean Architecture**: Separation of concerns with repository pattern
-- **AutoMapper Integration**: Automatic object-to-object mapping
-- **Swagger Documentation**: Interactive API documentation
-- **Docker Support**: Containerized PostgreSQL database
-- **Entity Framework Migrations**: Database versioning and schema management
-
-## Technology Stack
-
-### Backend
-
-- **Framework**: ASP.NET Core 9.0
-- **Database**: PostgreSQL
-- **ORM**: Entity Framework Core 9.0
-- **Authentication**: JWT Bearer tokens
-- **Mapping**: AutoMapper 12.0
-- **Documentation**: Swagger/OpenAPI
-
-### Dependencies
-
-- Microsoft.AspNetCore.Identity.EntityFrameworkCore
-- Microsoft.AspNetCore.Authentication.JwtBearer
-- Npgsql.EntityFrameworkCore.PostgreSQL
-- AutoMapper.Extensions.Microsoft.DependencyInjection
-- Swashbuckle.AspNetCore
-
-## 📋 Prerequisites
-
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [Docker](https://www.docker.com/get-started) (for PostgreSQL)
-- [Git](https://git-scm.com/)
-
-## ⚡ Quick Start
-
-### 1. Clone the Repository
+6. Initialize the database:
 
 ```bash
-git clone https://github.com/hengsomnang098/MiniPOS.git
-cd MiniPOS
-```
-
-### 2. Start PostgreSQL Database
-
-```bash
+# Start PostgreSQL
 docker-compose up -d
-```
 
-### 3. Update Database Connection
-
-Update the connection string in `appsettings.json` if needed:
-
-```json
-{
-  "ConnectionStrings": {
-    "HotelListingDbConnectionString": "Host=localhost;Database=MiniPOSDb;Username=postgres;Password=postgrespw"
-  }
-}
-```
-
-### 4. Navigate to Project Directory
-
-```bash
+# Create and apply migrations
 cd src/MiniPOS.API
+dotnet ef migrations add InitialCreate
+dotnet ef database update
 ```
 
-### 5. Restore Dependencies
+## Configuration keys and defaults
+
+- The project reads the connection string from the `ConnectionStrings:HotelListingDbConnectionString` key.
+- Example development connection string (already present in `src/MiniPOS.API/appsettings.Development.json`):
+
+  ```text
+  Host=localhost;Port=5432;Database=MiniPOS;Username=postgres;Password=postgrespw
+  ```
+
+- JWT settings are in `appsettings.Development.json` under `JwtSettings` (replace the `Key` with a secure secret for production).
+
+## Steps — Setup from scratch (recommended)
+
+1. Clone the repository
+
+   ```bash
+   git clone <repo_url>
+   cd MiniPOS
+   ```
+
+2. Start PostgreSQL with Docker Compose
+
+   The repository includes a minimal `docker-compose.yml` that starts a Postgres service exposing port 5432. From the repo root run:
+
+   ```bash
+   docker compose up -d
+   ```
+
+   By default the postgres service uses password `postgrespw` and exposes host port `5432`. It will persist data inside the container by default volume mapping.
+
+3. Verify PostgreSQL is running
+
+   ```bash
+   # macOS / Linux
+   docker compose ps
+
+   # or use psql if installed locally
+   PGPASSWORD=postgrespw psql -h localhost -U postgres -p 5432 -c "\l"
+   ```
+
+4. Configure the connection string (if you want to change it)
+
+   - The development connection string is already set in `src/MiniPOS.API/appsettings.Development.json`.
+   - For local dev you can keep that value. If you change it, ensure the key `ConnectionStrings:HotelListingDbConnectionString` is updated.
+
+   Optionally, you can set the connection string via environment variables or user secrets for development. Example environment variable (zsh):
+
+   ```bash
+   export ConnectionStrings__HotelListingDbConnectionString="Host=localhost;Port=5432;Database=MiniPOS;Username=postgres;Password=postgrespw"
+   ```
+
+5. Restore .NET tools and packages
+
+   ```bash
+   dotnet restore
+   ```
+
+6. Run EF Core migrations (create database schema)
+
+   The project uses EF Core migrations. The `ApplicationDbContext` and domain models are located in `src/MiniPOS.API.Domain` and the API project references those.
+
+   - To add or apply migrations from the API project root, run (from repository root):
+
+     ```bash
+     # Apply existing migrations (if migrations are present in the Domain project)
+     dotnet ef database update --project src/MiniPOS.API --startup-project src/MiniPOS.API
+     ```
+
+     If your migrations live in the Domain project, you can also target that project explicitly. Example:
+
+     ```bash
+     dotnet ef migrations add InitialCreate --project src/MiniPOS.API.Domain --startup-project src/MiniPOS.API
+     dotnet ef database update --project src/MiniPOS.API.Domain --startup-project src/MiniPOS.API
+     ```
+
+   Note: The repository may already contain migrations; check `src/MiniPOS.API.Domain/Migrations`.
+
+7. Seed data
+
+   - The application calls `DatabaseInitializer.InitializeAsync` during startup which runs data seeding (including identity seeding). If migrations have been applied and the application runs, seeding will run automatically.
+
+8. Run the API
+
+   ```bash
+   dotnet run --project src/MiniPOS.API
+   ```
+
+   The app uses Kestrel and will start; by default it configures HTTPS. When running locally, open Swagger at:
+
+- <https://localhost:5001/swagger/index.html> (if HTTPS default ports are used)
+
+If the port differs, check the console output for the exact listening URLs.
+
+## Using Swagger
+
+- Swagger is configured in `Program.cs`. After starting the API, visit `/swagger` (for example `https://localhost:5001/swagger/index.html`) to explore endpoints and test them.
+
+## Debugging and common troubleshooting
+
+- If EF can't connect to Postgres, confirm Docker is running and `docker compose ps` shows `postgres` service. Also ensure the connection string credentials match the environment.
+- If you see a port conflict, check other processes using `lsof -i :5000` or change the app URL via `ASPNETCORE_URLS` environment variable or launch settings in `src/MiniPOS.API/Properties/launchSettings.json`.
+- To view logs produced by Serilog file sink, check the `logs` directory under `src/MiniPOS.API`.
+
+## Running with Docker (app + db)
+
+This project includes `docker-compose.yml` only for PostgreSQL. If you want to containerize the API too, add a Dockerfile to `src/MiniPOS.API` and extend the compose file. Example minimal steps:
+
+1. Add `src/MiniPOS.API/Dockerfile` (example):
+
+   ```dockerfile
+   FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+   WORKDIR /app
+   EXPOSE 80
+
+   FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+   WORKDIR /src
+   COPY . .
+   RUN dotnet restore "src/MiniPOS.API/MiniPOS.API.csproj"
+   RUN dotnet publish "src/MiniPOS.API/MiniPOS.API.csproj" -c Release -o /app/publish
+
+   FROM base AS final
+   WORKDIR /app
+   COPY --from=build /app/publish .
+   ENTRYPOINT ["dotnet", "MiniPOS.API.dll"]
+   ```
+
+2. Extend `docker-compose.yml` to build and run the API alongside Postgres.
+
+## Security notes
+
+- The JWT `Key` in `appsettings.Development.json` is for development only. Use a secure secret stored in environment variables or a secrets manager for production.
+- Do not commit production secrets to the repository.
+
+## Maintenance & development tips
+
+- Add new migrations from the domain project or the project containing your DbContext. Use `--project` and `--startup-project` flags to point the tools at the right projects.
+- Keep NuGet package versions up to date, especially EF Core and Npgsql. The project currently targets EF Core 9 and Npgsql provider for .NET 9.
+
+## Useful commands summary
 
 ```bash
+# Start Postgres
+docker compose up -d
+
+# Stop Postgres
+docker compose down
+
+# Restore packages
 dotnet restore
+
+# Run the API
+dotnet run --project src/MiniPOS.API
+
+# Apply EF Migrations
+dotnet ef database update --project src/MiniPOS.API --startup-project src/MiniPOS.API
 ```
 
-### 6. Run Database Migrations
+## What I validated
+
+- Target framework: `net9.0` (checked `src/MiniPOS.API/MiniPOS.API.csproj` and `src/MiniPOS.API.Domain/MiniPOS.API.Domain.csproj`).
+- Database provider: PostgreSQL via `Npgsql.EntityFrameworkCore.PostgreSQL` and `UseNpgsql()` (checked `DatabaseConfiguration.cs` and project files).
+- Connection string key: `ConnectionStrings:HotelListingDbConnectionString` (checked `appsettings.Development.json`).
+- `docker-compose.yml` spins up a `postgres` service on port `5432`.
+
+## NuGet packages (by project)
+
+All projects target `net9.0`. Below are the PackageReference entries taken from each project file.
+
+ - `src/MiniPOS.API/MiniPOS.API.csproj`
+  - AutoMapper (12.0.1)
+  - AutoMapper.Extensions.Microsoft.DependencyInjection (12.0.1)
+  - Microsoft.AspNetCore.Authentication.JwtBearer (9.0.10)
+  - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.10)
+  - Microsoft.EntityFrameworkCore.Design (9.0.10)
+  - Microsoft.EntityFrameworkCore.Tools (9.0.10)
+  - Npgsql.EntityFrameworkCore.PostgreSQL (9.0.4)
+  - Serilog.AspNetCore (9.0.0)
+  - Serilog.Sinks.Console (6.0.0)
+  - Serilog.Sinks.File (7.0.0)
+  - Swashbuckle.AspNetCore (9.0.6)
+  - System.IdentityModel.Tokens.Jwt (8.14.0)
+
+ - `src/MiniPOS.API.Application/MiniPOS.API.Application.csproj`
+  - AutoMapper (12.0.1)
+  - AutoMapper.Extensions.Microsoft.DependencyInjection (12.0.1)
+  - Microsoft.AspNetCore.Authentication.JwtBearer (9.0.10)
+  - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.10)
+  - Microsoft.EntityFrameworkCore.Design (9.0.10)
+  - Microsoft.EntityFrameworkCore.Tools (9.0.10)
+  - Npgsql.EntityFrameworkCore.PostgreSQL (9.0.4)
+  - Swashbuckle.AspNetCore (9.0.6)
+  - System.IdentityModel.Tokens.Jwt (8.14.0)
+
+ - `src/MiniPOS.API.Domain/MiniPOS.API.Domain.csproj`
+  - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.10)
+  - Microsoft.EntityFrameworkCore.Design (9.0.10)
+  - Microsoft.EntityFrameworkCore.Tools (9.0.10)
+  - Npgsql.EntityFrameworkCore.PostgreSQL (9.0.4)
+
+- `src/MiniPOS.API.Common/MiniPOS.API.Common.csproj`
+   - (no external NuGet packages)
 
-```bash
-dotnet ef database update
-```
 
-### 7. Run the Application
-
-```bash
-dotnet run
-```
-
-### 8. Access the Application
-
-- **API**: `http://localhost:5000`
-- **Swagger UI**: `http://localhost:5000/swagger`
-
-## 🔧 Development
-
-### Running in Development Mode
-
-```bash
-cd src/MiniPOS.API
-dotnet run --environment Development
-```
-
-### Adding New Migrations
-
-```bash
-cd src/MiniPOS.API
-dotnet ef migrations add MigrationName
-dotnet ef database update
-```
-
-### Building the Project
-
-```bash
-dotnet build
-```
-
-### Running Tests
-
-```bash
-dotnet test
-```
-
-### Hot Reload Development
-
-```bash
-cd src/MiniPOS.API
-dotnet watch
-```
-
-## 📡 API Endpoints
-
-### Authentication
-
-- `POST /api/Auth/login` - User login
-- `POST /api/Auth/refresh` - Refresh Token
-
-### Users
-
-- `GET /api/adminusers` - Get all users
-- `POST /api/adminusers` - Create user
-- `PUT /api/adminusers/{id}` - Update user
-- `DELETE /api/adminusers/{id}` - Delete user
-
-### Categories
-
-- `GET /api/category` - Get all categories
-- `POST /api/category` - Create category
-- `PUT /api/category/{id}` - Update category
-- `DELETE /api/category/{id}` - Delete category
-
-### Stores
-
-- `GET /api/store` - Get all stores
-- `POST /api/store` - Create store
-- `PUT /api/store/{id}` - Update store
-- `DELETE /api/store/{id}` - Delete store
-
-## 🔐 Security Features
-
-- **JWT Authentication**: Secure token-based authentication
-- **Role-Based Authorization**: Fine-grained access control
-- **Password Requirements**: Enforced password complexity
-- **CORS Configuration**: Cross-origin request handling
-
-## 🌐 Configuration
-
-### Environment Variables
-
-- `ASPNETCORE_ENVIRONMENT`: Development/Production
-- `ConnectionStrings__HotelListingDbConnectionString`: Database connection string
-
-### Key Configuration Files
-
-- `appsettings.json`: Production configuration
-- `appsettings.Development.json`: Development-specific settings
-- `launchSettings.json`: Launch profiles and environment settings
-
-### Database Configuration
-
-The application uses PostgreSQL as the primary database. The connection string should be configured in `appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "HotelListingDbConnectionString": "Host=localhost;Database=MiniPOSDb;Username=postgres;Password=postgrespw"
-  }
-}
-```
-
-### Key Settings
-
-- JWT token configuration and secret keys
-- Identity password requirements and policies
-- CORS policies for cross-origin requests
-- Swagger documentation and UI settings
-- Database connection and Entity Framework configuration
-
-## 📝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## � Docker Support
-
-The application includes Docker Compose configuration for easy database setup:
-
-```yaml
-services:
-  postgres:
-    image: postgres:latest
-    environment:
-      - POSTGRES_PASSWORD=postgrespw
-    ports:
-      - "5432:5432"
-    volumes:
-      - /var/lib/postgresql/data
-```
-
-## 🧪 Testing
-
-### API Testing Tools
-
-- **Swagger UI**: Interactive API documentation and testing at `/swagger`
-- **HTTP Client Files**: Ready-to-use request collections for development
-- **Postman Compatible**: Import/export capability for API collections
-
-## Security Features
-
-- **JWT Bearer Authentication**: Secure token-based authentication
-- **ASP.NET Core Identity**: Built-in user management system  
-- **Role-Based Authorization**: Fine-grained access control
-- **Password Security**: Enforced complexity requirements
-- **Input Validation**: DTO-based request validation
-- **CORS Configuration**: Cross-origin request handling
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👨‍💻 Author
-
-**Heng Somnang** - [hengsomnang098](https://github.com/hengsomnang098)
-
-## 🙏 Acknowledgments
-
-- ASP.NET Core team for the excellent framework
-- Entity Framework Core for robust data access
-- PostgreSQL community for the reliable database system
-- AutoMapper for seamless object mapping
-
----
-
-Built with ❤️ using ASP.NET Core 9.0
-
-## 🛠️ Technology Stack
-
-### Backend Framework
-
-- **ASP.NET Core 9.0** - Modern web framework
-- **Entity Framework Core 9.0** - ORM for data access
-- **PostgreSQL** - Robust relational database
-- **AutoMapper 12.0** - Object-to-object mapping
-
-### Authentication & Security
-
-- **ASP.NET Core Identity** - User management system
-- **JWT Bearer Tokens** - Secure authentication
-- **Role-based Authorization** - Fine-grained access control
-
-### Development Tools
-
-- **Swagger/OpenAPI** - API documentation
-- **Docker Compose** - Database containerization
-- **Entity Framework Migrations** - Database versioning
-
-### Key Dependencies
-
-```xml
-<PackageReference Include="AutoMapper" Version="12.0.1" />
-<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
-<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
-<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.10" />
-<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10" />
-<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10" />
-<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
-<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
-```
-
-## 🏛️ Database Schema
-
-### Core Entities
-
-- **ApplicationUser** - Extended IdentityUser with custom properties
-- **ApplicationRole** - Custom roles for system authorization  
-- **Category** - Product category management with hierarchical support
-- **Store** - Multi-location store management
-- **Permission** - Granular system permissions
-- **RolePermission** - Many-to-many relationship for role-based access
-
-### Entity Relationships
-
-ApplicationUser ──┐
-                  ├── ApplicationRole ──── RolePermission ──── Permission
-                  │
-                  └── Store ──── Category
-
-## 🧪 Testing & Development
-
-### API Testing
-
-- **HTTP Client Files** - Ready-to-use API request collections
-- **Swagger UI** - Interactive API documentation and testing interface
-- **Postman Compatible** - Import/export API collections
-
-### Development Workflow
-
-- **Hot Reload** - `dotnet watch` for rapid development
-- **Migration Support** - Automatic database schema updates  
-- **Seed Data** - Pre-configured test data for development
-
-## 🐳 Docker Configuration
-
-### PostgreSQL Container
-
-```yaml
-services:
-  postgres:
-    image: postgres:latest
-    environment:
-      - POSTGRES_PASSWORD=postgrespw
-    ports:
-      - "5432:5432"
-    volumes:
-      - /var/lib/postgresql/data
-```
-
-### Development Setup
-
-1. Start database: `docker-compose up -d`
-2. Verify connection: Check PostgreSQL is running on `localhost:5432`
-3. Run migrations: `dotnet ef database update`
-
-## � Security Implementation
-
-### Authentication Flow
-
-1. **User Login** → JWT Token Generation
-2. **Token Validation** → Request Authorization  
-3. **Role Verification** → Endpoint Access Control
-
-### Security_Features
-
-- **Password Hashing** - BCrypt with salt
-- **Token Expiration** - Configurable JWT lifetime
-- **Role Hierarchy** - Admin, Manager, User roles
-- **CORS Configuration** - Cross-origin request handling
-- **Input Validation** - DTO-based request validation
-
-## 📈 Performance & Scalability
-
-### Database Optimization
-
-- **Entity Framework** - Optimized queries with navigation properties
-- **Connection Pooling** - Efficient database connection management  
-- **Indexing Strategy** - Primary and foreign key optimization
-
-### API Performance
-
-- **AutoMapper** - Efficient object mapping
-- **Async/Await** - Non-blocking I/O operations
-- **Response Caching** - Configurable caching policies

@@ -1,14 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Authorization;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.Category;
 using MiniPOS.API.Common.Constants;
+using MiniPOS.API.Authorization;
+using static MiniPOS.API.Authorization.Permissions;
 
 namespace MiniPOS.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [EnableRateLimiting(RateLimitingConstants.PerUserPolicy)]
+    [Authorize] // Requires authentication for all actions
     public class CategoryController : BaseApiController
     {
         private readonly ICategoryRepository _categoryRepository;
@@ -20,6 +24,7 @@ namespace MiniPOS.API.Controllers
 
         // GET: api/Category
         [HttpGet]
+        [HasPermission(Categories.View)]
         public async Task<ActionResult<IEnumerable<GetCategoryDto>>> GetCategories()
         {
             var result = await _categoryRepository.GetAllAsync();
@@ -28,6 +33,7 @@ namespace MiniPOS.API.Controllers
 
         // GET: api/Category/{id}
         [HttpGet("{id}")]
+        [HasPermission(Categories.View)]
         public async Task<ActionResult<GetCategoryDto>> GetCategory(Guid id)
         {
             var result = await _categoryRepository.GetByIdAsync(id);
@@ -36,6 +42,7 @@ namespace MiniPOS.API.Controllers
 
         // POST: api/Category
         [HttpPost]
+        [HasPermission(Categories.Create)]
         public async Task<ActionResult<GetCategoryDto>> CreateCategory(CreateCategoryDto createDto)
         {
             var result = await _categoryRepository.CreateAsync(createDto);
@@ -48,6 +55,7 @@ namespace MiniPOS.API.Controllers
 
         // PUT: api/Category/{id}
         [HttpPut("{id}")]
+        [HasPermission(Categories.Update)]
         public async Task<IActionResult> UpdateCategory(Guid id, UpdateCategoryDto updateDto)
         {
             var result = await _categoryRepository.UpdateAsync(id, updateDto);
@@ -56,6 +64,7 @@ namespace MiniPOS.API.Controllers
 
         // DELETE: api/Category/{id}
         [HttpDelete("{id}")]
+        [HasPermission(Categories.Delete)]
         public async Task<IActionResult> DeleteCategory(Guid id)
         {
             var result = await _categoryRepository.DeleteAsync(id);

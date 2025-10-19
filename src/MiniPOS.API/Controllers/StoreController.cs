@@ -1,13 +1,16 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.Store;
+using MiniPOS.API.Authorization;
 using MiniPOS.API.Common.Constants;
 
 namespace MiniPOS.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     [EnableRateLimiting(RateLimitingConstants.PerUserPolicy)]
     public class StoreController : BaseApiController
     {
@@ -18,8 +21,15 @@ namespace MiniPOS.API.Controllers
             _storeRepository = storeRepository;
         }
 
+        private string getUserId()
+        {
+            return User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? User?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+        }
+
         // GET: api/Store
         [HttpGet]
+        [HasPermission(Permissions.Stores.View)]
         public async Task<ActionResult<IEnumerable<GetStoreDto>>> GetStores()
         {
             var stores = await _storeRepository.GetAllAsync();
@@ -28,6 +38,7 @@ namespace MiniPOS.API.Controllers
 
         // GET: api/Store/{id}
         [HttpGet("{id}")]
+        [HasPermission(Permissions.Stores.View)]
         public async Task<ActionResult<GetStoreDto>> GetStore(Guid id)
         {
             var store = await _storeRepository.GetDetailsAsync(id);
@@ -36,9 +47,17 @@ namespace MiniPOS.API.Controllers
 
         // POST: api/Store
         [HttpPost]
+        [HasPermission(Permissions.Stores.Create)]
         public async Task<ActionResult<GetStoreDto>> CreateStore(CreateStoreDto createDto)
         {
-            var result = await _storeRepository.CreateAsync(createDto);
+            var userId = getUserId();
+
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _storeRepository.CreateAsync(createDto, userId);
             if (!result.IsSuccess)
             {
                 return MapErrorsToResponse(result.Errors);
@@ -48,17 +67,21 @@ namespace MiniPOS.API.Controllers
 
         // PUT: api/Store/{id}
         [HttpPut("{id}")]
+        [HasPermission(Permissions.Stores.Update)]
         public async Task<IActionResult> UpdateStore(Guid id, UpdateStoreDto updateDto)
         {
-            var result = await _storeRepository.UpdateAsync(id, updateDto);
+            var userId = getUserId();
+            var result = await _storeRepository.UpdateAsync(id, updateDto, userId);
             return ToActionResult(result);
         }
 
         // DELETE: api/Store/{id}
         [HttpDelete("{id}")]
+        [HasPermission(Permissions.Stores.Delete)]
         public async Task<IActionResult> DeleteStore(Guid id)
         {
-            var result = await _storeRepository.DeleteAsync(id);
+            var userId = getUserId();
+            var result = await _storeRepository.DeleteAsync(id, userId);
             return ToActionResult(result);
         }
 

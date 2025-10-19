@@ -14,6 +14,8 @@ namespace MiniPOS.API.Common.Results
         public static Error NotFound(string message) => new(ErrorCodes.NotFound, message);
         public static Error Conflict(string message) => new(ErrorCodes.Conflict, message);
         public static Error BadRequest(string message) => new(ErrorCodes.BadRequest, message);
+        public static Error Unauthorized(string message) => new(ErrorCodes.Unauthorized, message);
+        public static Error Forbidden(string message) => new(ErrorCodes.Forbidden, message);
     }
 
     public readonly record struct Result
@@ -30,6 +32,8 @@ namespace MiniPOS.API.Common.Results
         public static Result Failure(params Error[] errors) => new(false, errors);
         public static Result NotFound(params Error[] errors) => new(false, errors);
         public static Result BadRequest(params Error[] errors) => new(false, errors);
+        public static Result Unauthorized(string message) => new(false, [Error.Unauthorized(message)]);
+        public static Result Forbidden(string message) => new(false, [Error.Forbidden(message)]);
 
         public static Result Combine(params Result[] results)
             => results.Any(r => !r.IsSuccess)

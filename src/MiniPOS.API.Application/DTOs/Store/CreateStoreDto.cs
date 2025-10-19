@@ -12,7 +12,6 @@ namespace MiniPOS.API.Application.DTOs.Store
         [Required]
         [MaxLength(50)]
         public string StoreType { get; set; }
-        [Required]
-        public string UserId { get; set; }
+
     }
 }
