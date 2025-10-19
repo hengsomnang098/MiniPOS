@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using MiniPOS.Constants;
-using MiniPOS.Results;
+using MiniPOS.API.Common.Constants;
+using MiniPOS.API.Common.Results;
 
 
-namespace MiniPOS.Controllers
+namespace MiniPOS.API.Controllers
 {
     public class BaseApiController :ControllerBase
     {

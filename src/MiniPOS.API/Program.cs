@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using MiniPOS.Application.Interfaces;
+using MiniPOS.API.Application.Contracts;
+using MiniPOS.API.Application.Services;
+using MiniPOS.API.Domain;
+using MiniPOS.API.MappingProfiles;
 using MiniPOS.Application.Repositories;
-using MiniPOS.Data;
-using MiniPOS.Data.Seed;
-using MiniPOS.MappingProfiles;
 
 var builder = WebApplication.CreateBuilder(args);
 

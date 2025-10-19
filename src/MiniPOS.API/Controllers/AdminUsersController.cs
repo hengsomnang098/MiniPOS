@@ -1,9 +1,8 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MiniPOS.Application.Interfaces;
-using MiniPOS.DTOs.User;
+using MiniPOS.API.Application.Contracts;
+using MiniPOS.API.Application.DTOs.User;
 
-namespace MiniPOS.Controllers
+namespace MiniPOS.API.Controllers
 {
     
     [ApiController]

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MiniPOS.Application.Interfaces;
-using MiniPOS.Controllers;
-using MiniPOS.DTOs.Auth;
+using MiniPOS.API.Application.Contracts;
+using MiniPOS.API.Application.DTOs.Auth;
+using MiniPOS.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

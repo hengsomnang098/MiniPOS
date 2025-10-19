@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using MiniPOS.Application.Interfaces;
-using MiniPOS.DTOs.Store;
+using MiniPOS.API.Application.Contracts;
+using MiniPOS.API.Application.DTOs.Store;
 
-namespace MiniPOS.Controllers
+namespace MiniPOS.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

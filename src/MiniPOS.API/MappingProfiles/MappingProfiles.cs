@@ -1,15 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
-using MiniPOS.Data;
-using MiniPOS.DTOs.Auth;
-using MiniPOS.DTOs.Category;
-using MiniPOS.DTOs.Store;
-using MiniPOS.DTOs.User;
+using MiniPOS.API.Application.DTOs.Category;
+using MiniPOS.API.Application.DTOs.Store;
+using MiniPOS.API.Application.DTOs.User;
+using MiniPOS.API.Domain;
 
-namespace MiniPOS.MappingProfiles
+namespace MiniPOS.API.MappingProfiles
 {
     public class MappingProfiles : Profile
     {
