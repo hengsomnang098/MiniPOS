@@ -4,7 +4,7 @@ using MiniPOS.API.Application.DTOs.Store;
 using MiniPOS.API.Application.DTOs.User;
 using MiniPOS.API.Domain;
 
-namespace MiniPOS.API.MappingProfiles
+namespace MiniPOS.API.Application
 {
     public class MappingProfiles : Profile
     {
