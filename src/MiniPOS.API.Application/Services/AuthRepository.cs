@@ -22,6 +22,7 @@ namespace MiniPOS.API.Application.Services
         public async Task<Result<AuthResponseDto>> LoginAsync(LoginUserDto loginUserDto)
         {
             var user = await userManager.Users
+                .AsNoTracking()
                 .Include(u => u.Role)
                     .ThenInclude(r => r.RolePermissions)
                         .ThenInclude(rp => rp.Permission)

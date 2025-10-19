@@ -30,6 +30,7 @@ namespace MiniPOS.Application.Repositories
                 await _context.SaveChangesAsync();
 
                 var storeDto = await _context.Stores
+                    .AsNoTracking()
                     .Where(s => s.Id == store.Id)
                     .ProjectTo<GetStoreDto>(_mapper.ConfigurationProvider)
                     .FirstAsync();
@@ -59,6 +60,7 @@ namespace MiniPOS.Application.Repositories
         public async Task<Result<IEnumerable<GetStoreDto>>> GetAllAsync()
         {
             var stores = await _context.Stores
+                .AsNoTracking()
                 .ProjectTo<GetStoreDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();
             return Result<IEnumerable<GetStoreDto>>.Success(stores);
@@ -67,6 +69,7 @@ namespace MiniPOS.Application.Repositories
         public async Task<Result<GetStoreDto>> GetDetailsAsync(Guid id)
         {
             var store = await _context.Stores
+                .AsNoTracking()
                 .Where(s => s.Id == id)
                 .ProjectTo<GetStoreDto>(_mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync();
@@ -78,12 +81,12 @@ namespace MiniPOS.Application.Repositories
 
         public async Task<bool> StoreExistAsync(Guid id)
         {
-            return await _context.Stores.AnyAsync(s => s.Id == id);
+            return await _context.Stores.AsNoTracking().AnyAsync(s => s.Id == id);
         }
 
         public async Task<bool> StoreExistAsync(string name)
         {
-            return await _context.Stores.AnyAsync(s => s.StoreName.ToLower().Trim() == name.ToLower().Trim());
+            return await _context.Stores.AsNoTracking().AnyAsync(s => s.StoreName.ToLower().Trim() == name.ToLower().Trim());
         }
 
         public async Task<Result> UpdateAsync(Guid id, UpdateStoreDto updateDto)

@@ -23,12 +23,12 @@ namespace MiniPOS.API.Application.Services
         }
         public Task<bool> CategoryExistsAsync(Guid id)
         {
-            return context.Categories.AnyAsync(c => c.Id == id);
+            return context.Categories.AsNoTracking().AnyAsync(c => c.Id == id);
         }
 
         public Task<bool> CategoryExistsAsync(string name)
         {
-            return context.Categories.AnyAsync(c => c.CategoryName == name);
+            return context.Categories.AsNoTracking().AnyAsync(c => c.CategoryName == name);
         }
 
 
@@ -39,6 +39,7 @@ namespace MiniPOS.API.Application.Services
             await context.SaveChangesAsync();
 
             var categoryDto = await context.Categories
+                .AsNoTracking()
                 .Where(c => c.Id == Category.Id)
                 .ProjectTo<GetCategoryDto>(mapper.ConfigurationProvider)
                 .FirstAsync();
@@ -63,6 +64,7 @@ namespace MiniPOS.API.Application.Services
         public async Task<Result<IEnumerable<GetCategoryDto>>> GetAllAsync()
         {
             var category = await context.Categories
+                .AsNoTracking()
                 .ProjectTo<GetCategoryDto>(mapper.ConfigurationProvider)
                 .ToListAsync();
             return Result<IEnumerable<GetCategoryDto>>.Success(category);
@@ -71,6 +73,7 @@ namespace MiniPOS.API.Application.Services
         public async Task<Result<GetCategoryDto>> GetByIdAsync(Guid id)
         {
             var category = await context.Categories
+                .AsNoTracking()
                 .Where(c => c.Id == id)
                 .ProjectTo<GetCategoryDto>(mapper.ConfigurationProvider)
                 .FirstOrDefaultAsync();

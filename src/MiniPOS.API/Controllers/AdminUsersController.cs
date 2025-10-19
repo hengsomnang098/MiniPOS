@@ -1,12 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.User;
+using MiniPOS.API.Common.Constants;
 
 namespace MiniPOS.API.Controllers
 {
     
     [ApiController]
     [Route("api/users")]
+    [EnableRateLimiting(RateLimitingConstants.PerUserPolicy)]
     public class AdminUsersController : BaseApiController
     {
         private readonly IUserRepository _userRepository;

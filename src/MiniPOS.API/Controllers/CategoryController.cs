@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.Category;
+using MiniPOS.API.Common.Constants;
 
 namespace MiniPOS.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [EnableRateLimiting(RateLimitingConstants.PerUserPolicy)]
     public class CategoryController : BaseApiController
     {
         private readonly ICategoryRepository _categoryRepository;

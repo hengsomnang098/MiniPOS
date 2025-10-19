@@ -36,7 +36,7 @@ public class UserRepository : IUserRepository
         try
         {
             // ✅ Validate role by ID
-            var role = await _roleManager.Roles.FirstOrDefaultAsync(r => r.Id == request.RoleId);
+            var role = await _roleManager.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.RoleId);
             if (role == null)
             {
                 return Result<GetUserDto>.Failure(
@@ -102,9 +102,9 @@ public class UserRepository : IUserRepository
     public async Task<Result<IEnumerable<GetUserDto>>> GetAllAsync()
     {
         var users = await _context.Users
+            .AsNoTracking()
             .Include(u => u.Role)
             .ProjectTo<GetUserDto>(_mapper.ConfigurationProvider)
-            .AsNoTracking()
             .ToListAsync();
 
         return Result<IEnumerable<GetUserDto>>.Success(users);
@@ -113,10 +113,10 @@ public class UserRepository : IUserRepository
     public async Task<Result<GetUserDto>> GetByIdAsync(Guid id)
     {
         var user = await _context.Users
+            .AsNoTracking()
             .Include(u => u.Role)
             .Where(u => u.Id == id)
             .ProjectTo<GetUserDto>(_mapper.ConfigurationProvider)
-            .AsNoTracking()
             .FirstOrDefaultAsync();
 
         return user != null
@@ -148,7 +148,7 @@ public class UserRepository : IUserRepository
         }
 
         // Reload role
-        var role = await _roleManager.Roles.FirstOrDefaultAsync(r => r.Id == user.RoleId);
+        var role = await _roleManager.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == user.RoleId);
         user.Role = role;
 
         var dto = _mapper.Map<GetUserDto>(user);
