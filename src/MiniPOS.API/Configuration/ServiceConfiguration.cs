@@ -28,6 +28,7 @@ public static class ServiceConfiguration
         services.AddScoped<IStoreRepository, StoreRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
 
         return services;
     }

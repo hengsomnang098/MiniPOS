@@ -55,7 +55,7 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "MiniPOS API terminated unexpectedly");
-    throw;
+    
 }
 finally
 {
