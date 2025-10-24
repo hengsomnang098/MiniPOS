@@ -1,0 +1,192 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { DataTable } from "@/components/ui/DataTable";
+import { Users } from "@/types/user";
+import { Roles } from "@/types/role";
+import { PermissionButton } from "@/components/permissionButton/PermissionButton";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { UserFormDialog } from "./UserFormDialog";
+import LoadingPage from "../loading";
+import { createUser, deleteUser, updateUser } from "@/app/actions/userAction";
+
+export default function UsersList({
+  initialUsers,
+  initialRoles,
+}: {
+  initialUsers: Users[];
+  initialRoles: Roles[];
+}) {
+  const [users, setUsers] = useState(initialUsers);
+  const [open, setOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<Users | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+
+  // Create User
+  async function handleCreate(data: Partial<Users>) {
+    startTransition(async () => {
+      const result = await createUser(data);
+
+      if (result.success) {
+        setUsers((prev) => [...prev, result.data!]);
+        toast({
+          title: "✅ User Created",
+          description: `${result.data!.fullName} added successfully.`,
+        });
+      } else {
+        if (result.validationErrors) {
+          toast({
+            title: "Validation Error",
+            description: Object.values(result.validationErrors).flat().join(", "),
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Failed to Create User",
+            description: result.error || "An unknown error occurred.",
+            variant: "destructive",
+          });
+        }
+      }
+    });
+  }
+
+
+  // Update User
+  async function handleUpdate(id: string, data: Partial<Users>) {
+    startTransition(async () => {
+      const updated = await updateUser(id, { ...data, id });
+      if (updated) {
+        setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+        setEditingUser(null);
+        toast({ title: "User Updated", description: `${updated.fullName} updated.` });
+      } else {
+        toast({
+          title: "Failed to Update User",
+          description: "An error occurred.",
+          variant: "destructive",
+        });
+      }
+    });
+  }
+
+  // Delete User
+  async function handleDelete(id: string) {
+    startTransition(async () => {
+      const ok = await deleteUser(id);
+      if (ok) {
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+        toast({ title: "User Deleted", description: "User removed successfully." });
+      } else {
+        toast({
+          title: "Failed to Delete User",
+          description: "An error occurred.",
+          variant: "destructive",
+        });
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-medium">All Users</h2>
+        <PermissionButton
+          permission="Users.Create"
+          className="bg-cyan-500"
+          onClick={() => {
+            setEditingUser(null);
+            setOpen(true);
+          }}
+        >
+          + Add User
+        </PermissionButton>
+      </div>
+
+      {isPending && <LoadingPage />}
+
+      {/* DataTable */}
+      <DataTable
+        data={users}
+        columns={[
+          { key: "fullName", label: "Full Name" },
+          { key: "email", label: "Email" },
+          { key: "role", label: "Role" },
+          {
+            key: "actions",
+            label: "Actions",
+            className: "text-right",
+            render: (user) => (
+              <div className="space-x-2 text-right">
+                <PermissionButton
+                  size="sm"
+                  variant="outline"
+                  permission="Users.Update"
+                  onClick={() => {
+                    setEditingUser(user);
+                    setOpen(true);
+                  }}
+                >
+                  Edit
+                </PermissionButton>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <PermissionButton
+                      size="sm"
+                      variant="destructive"
+                      permission="Users.Delete"
+                    >
+                      Delete
+                    </PermissionButton>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Permanently remove <strong>{user.fullName}</strong>?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDelete(user.id)}
+                        className="bg-destructive text-white hover:bg-destructive/90"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      {/* Create/Edit Dialog */}
+      <UserFormDialog
+        open={open}
+        setOpen={setOpen}
+        onSubmit={
+          editingUser ? (data) => handleUpdate(editingUser.id, data) : handleCreate
+        }
+        user={editingUser}
+        roles={initialRoles}
+      />
+    </div>
+  );
+}

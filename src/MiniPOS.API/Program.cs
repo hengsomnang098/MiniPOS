@@ -25,6 +25,9 @@ try
     // Add authorization configuration separately to avoid ambiguity
     AuthorizationConfiguration.AddAuthorizationConfiguration(builder.Services);
 
+    builder.Services.AddMemoryCache();
+
+
     var app = builder.Build();
 
     // Configure Serilog request logging
@@ -44,8 +47,16 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // Initialize Database & Seed Data
-    await DatabaseInitializer.InitializeAsync(app.Services);
+    try
+    {
+        // Initialize Database & Seed Data
+        await DatabaseInitializer.InitializeAsync(app.Services);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "An error occurred while initializing the database");
+        throw;
+    }
 
     app.MapControllers();
 

@@ -100,7 +100,7 @@ The solution uses the following key NuGet packages:
 - `Swashbuckle.AspNetCore` (6.5.0) - Swagger/OpenAPI documentation
 
 ## Recommended Improvements
-
+`
 - Add `src/MiniPOS.API/Dockerfile` and extend `docker-compose.yml` for full containerization
 - Add a `.gitignore` to exclude `bin/`, `obj/`, user secrets, and local logs
 - Commit EF Core migrations for easier deployment and development

@@ -2,12 +2,16 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.User;
 using MiniPOS.API.Common.Constants;
 using MiniPOS.API.Common.Results;
 using MiniPOS.API.Domain;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Linq;
 
 public class UserRepository : IUserRepository
 {
@@ -16,27 +20,33 @@ public class UserRepository : IUserRepository
     private readonly IMapper _mapper;
     private readonly ILogger<UserRepository> _logger;
     private readonly ApplicationDbContext _context;
+    private readonly IMemoryCache _cache;
 
+    // ✅ Inject IMemoryCache
     public UserRepository(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
         IMapper mapper,
         ILogger<UserRepository> logger,
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        IMemoryCache cache)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _mapper = mapper;
         _logger = logger;
         _context = context;
+        _cache = cache;
     }
 
+    // ✅ Create user with cached roles
     public async Task<Result<GetUserDto>> CreateUserAsync(CreateUserDto request, string createdBy)
     {
         try
         {
-            // ✅ Validate role by ID
-            var role = await _roleManager.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == request.RoleId);
+            // 🧠 Try to get roles from cache first
+            var roles = await GetCachedRolesAsync();
+            var role = roles.FirstOrDefault(r => r.Id == request.RoleId);
             if (role == null)
             {
                 return Result<GetUserDto>.Failure(
@@ -73,6 +83,9 @@ public class UserRepository : IUserRepository
             dto.RoleId = role.Id;
             dto.Role = role.Name;
 
+            // Optional: clear cached user list
+            _cache.Remove("all_users");
+
             return Result<GetUserDto>.Success(dto);
         }
         catch (Exception ex)
@@ -85,27 +98,44 @@ public class UserRepository : IUserRepository
 
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var user = _userManager.FindByIdAsync(id.ToString());
+        var user = await _userManager.FindByIdAsync(id.ToString());
         if (user == null)
         {
-            return await Task.FromResult(Result.Failure(new Error(ErrorCodes.NotFound, "User not found.")));
+            return Result.Failure(new Error(ErrorCodes.NotFound, "User not found."));
         }
-        var deleteResult = _userManager.DeleteAsync(user.Result);
-        if (!deleteResult.Result.Succeeded)
+
+        var deleteResult = await _userManager.DeleteAsync(user);
+        if (!deleteResult.Succeeded)
         {
-            var errors = string.Join("; ", deleteResult.Result.Errors.Select(e => e.Description));
-            return await Task.FromResult(Result.Failure(new Error(ErrorCodes.Failure, errors)));
+            var errors = string.Join("; ", deleteResult.Errors.Select(e => e.Description));
+            return Result.Failure(new Error(ErrorCodes.Failure, errors));
         }
-        return await Task.FromResult(Result.Success());
+
+        // ✅ Invalidate cache
+        _cache.Remove("all_users");
+
+        return Result.Success();
     }
 
     public async Task<Result<IEnumerable<GetUserDto>>> GetAllAsync()
     {
+        // ✅ Try to get from cache first
+        if (_cache.TryGetValue("all_users", out IEnumerable<GetUserDto> cachedUsers))
+        {
+            return Result<IEnumerable<GetUserDto>>.Success(cachedUsers);
+        }
+
+        // Otherwise fetch from DB
         var users = await _context.Users
             .AsNoTracking()
-            .Include(u => u.Role)
             .ProjectTo<GetUserDto>(_mapper.ConfigurationProvider)
             .ToListAsync();
+
+        // ✅ Cache results for 5 minutes
+        _cache.Set("all_users", users, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+        });
 
         return Result<IEnumerable<GetUserDto>>.Success(users);
     }
@@ -124,17 +154,17 @@ public class UserRepository : IUserRepository
             : Result<GetUserDto>.Failure(new Error(ErrorCodes.NotFound, "User not found."));
     }
 
-    public async Task<Result> UpdateUserAsync(UpdateUserDto request, Guid id)
+    public async Task<Result<GetUserDto>> UpdateUserAsync(UpdateUserDto request, Guid id)
     {
-        if(id != request.Id)
+        if (id != request.Id)
         {
-            return Result.Failure(new Error(ErrorCodes.Validation, "ID mismatch between route and body."));
+            return Result<GetUserDto>.Failure(new Error(ErrorCodes.Validation, "ID mismatch between route and body."));
         }
 
         var user = await _userManager.FindByIdAsync(id.ToString());
         if (user == null)
         {
-            return Result.Failure(new Error(ErrorCodes.NotFound, "User not found."));
+            return Result<GetUserDto>.Failure(new Error(ErrorCodes.NotFound, "User not found."));
         }
 
         // Update user properties
@@ -144,17 +174,39 @@ public class UserRepository : IUserRepository
         if (!updateResult.Succeeded)
         {
             var errors = string.Join("; ", updateResult.Errors.Select(e => e.Description));
-            return Result.Failure(new Error(ErrorCodes.Validation, errors));
+            return Result<GetUserDto>.Failure(new Error(ErrorCodes.Validation, errors));
         }
 
-        // Reload role
-        var role = await _roleManager.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == user.RoleId);
+        // Reload role from cache
+        var roles = await GetCachedRolesAsync();
+        var role = roles.FirstOrDefault(r => r.Id == user.RoleId);
         user.Role = role;
 
         var dto = _mapper.Map<GetUserDto>(user);
         dto.RoleId = role.Id;
         dto.Role = role.Name;
 
-        return Result.Success();
+        // ✅ Invalidate cached users (since data changed)
+        _cache.Remove("all_users");
+
+        return Result<GetUserDto>.Success(dto);
+    }
+
+    // ✅ Private helper: get cached roles
+    private async Task<List<ApplicationRole>> GetCachedRolesAsync()
+    {
+        if (_cache.TryGetValue("roles", out List<ApplicationRole> cachedRoles))
+        {
+            return cachedRoles;
+        }
+
+        var roles = await _roleManager.Roles.AsNoTracking().ToListAsync();
+
+        _cache.Set("roles", roles, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+        });
+
+        return roles;
     }
 }

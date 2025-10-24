@@ -9,7 +9,7 @@ namespace MiniPOS.API.Application.Contracts
         Task<Result<IEnumerable<GetUserDto>>> GetAllAsync();
         Task<Result<GetUserDto>> GetByIdAsync(Guid id);
         Task<Result> DeleteAsync(Guid id);
-        Task<Result> UpdateUserAsync(UpdateUserDto request, Guid id);
+        Task<Result<GetUserDto>> UpdateUserAsync(UpdateUserDto request, Guid id);
 
     }
 }
