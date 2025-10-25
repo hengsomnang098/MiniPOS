@@ -6,10 +6,10 @@ namespace MiniPOS.API.Domain
     {
         public string FullName { get; set; } = string.Empty;
 
-        // ✅ Foreign key link to role
         public Guid RoleId { get; set; }
         public ApplicationRole Role { get; set; }
 
-
+        public ICollection<Shop> Shops { get; set; } = new List<Shop>();
+        public ICollection<ShopUser> ShopUsers { get; set; } = new List<ShopUser>();
     }
 }

@@ -1,7 +1,6 @@
 using MiniPOS.API.Application;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.Services;
-using MiniPOS.Application.Repositories;
 
 namespace MiniPOS.API.Configuration;
 
@@ -25,10 +24,9 @@ public static class ServiceConfiguration
 
         // Dependency Injection Configuration
         services.AddScoped<IAuthRepository, AuthRepository>();
-        services.AddScoped<IStoreRepository, StoreRepository>();
-        services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IShopRepository, ShopRepository>();
 
         return services;
     }

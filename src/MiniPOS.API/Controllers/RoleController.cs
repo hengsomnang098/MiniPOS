@@ -24,7 +24,7 @@ namespace MiniPOS.API.Controllers
 
         // GET: api/Role
         [HttpGet]
-        [HasPermission(Users.View)]
+        [HasPermission(Roles.View)]
         public async Task<ActionResult<List<GetRoleDto>>> GetRoles()
         {
             var result = await _roleRepository.GetAllAsync();
@@ -33,7 +33,7 @@ namespace MiniPOS.API.Controllers
 
         // GET: api/Role/{id}
         [HttpGet("{id}")]
-        [HasPermission(Users.View)]
+        [HasPermission(Roles.View)]
         public async Task<ActionResult<GetRoleDto>> GetRole(Guid id)
         {
             var result = await _roleRepository.GetByIdAsync(id);
@@ -42,7 +42,7 @@ namespace MiniPOS.API.Controllers
 
         // POST: api/Role
         [HttpPost]
-        [HasPermission(Users.Create)]
+        [HasPermission(Roles.Create)]
         public async Task<ActionResult<GetRoleDto>> CreateRole(CreateRoleDto createDto)
         {
             var result = await _roleRepository.CreateAsync(createDto);
@@ -51,7 +51,7 @@ namespace MiniPOS.API.Controllers
 
         // PUT: api/Role/{id}
         [HttpPut("{id}")]
-        [HasPermission(Users.Update)]
+        [HasPermission(Roles.Update)]
         public async Task<ActionResult<GetRoleDto>> UpdateRole(Guid id, UpdateRoleDto updateDto)
         {
             var result = await _roleRepository.UpdateAsync(id, updateDto);
@@ -60,7 +60,7 @@ namespace MiniPOS.API.Controllers
 
         // DELETE: api/Role/{id}
         [HttpDelete("{id}")]
-        [HasPermission(Users.Delete)]
+        [HasPermission(Roles.Delete)]
         public async Task<ActionResult<bool>> DeleteRole(Guid id)
         {
             var result = await _roleRepository.DeleteAsync(id);
@@ -69,7 +69,7 @@ namespace MiniPOS.API.Controllers
 
         // GET: api/Role/permissions
         [HttpGet("permissions")]
-        [HasPermission(Users.View)]
+        [HasPermission(Roles.View)]
         public async Task<ActionResult<List<PermissionDto>>> GetAvailablePermissions()
         {
             var result = await _roleRepository.GetAvailablePermissionsAsync();
@@ -78,7 +78,7 @@ namespace MiniPOS.API.Controllers
 
         // GET: api/Role/{id}/permissions
         [HttpGet("{id}/permissions")]
-        [HasPermission(Users.View)]
+        [HasPermission(Roles.View)]
         public async Task<ActionResult<List<PermissionDto>>> GetRolePermissions(Guid id)
         {
             var result = await _roleRepository.GetRolePermissionsAsync(id);

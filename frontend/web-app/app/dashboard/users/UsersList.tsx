@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { DataTable } from "@/components/ui/DataTable";
+import { DataTable } from "@/components/DataTable";
 import { Users } from "@/types/user";
 import { Roles } from "@/types/role";
 import { PermissionButton } from "@/components/permissionButton/PermissionButton";
@@ -21,13 +21,15 @@ import { UserFormDialog } from "./UserFormDialog";
 import LoadingPage from "../loading";
 import { createUser, deleteUser, updateUser } from "@/app/actions/userAction";
 
+interface UsersListProps {
+  initialUsers: Users[];
+  initialRoles: Roles[];
+}
+
 export default function UsersList({
   initialUsers,
   initialRoles,
-}: {
-  initialUsers: Users[];
-  initialRoles: Roles[];
-}) {
+}: UsersListProps) {
   const [users, setUsers] = useState(initialUsers);
   const [open, setOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<Users | null>(null);

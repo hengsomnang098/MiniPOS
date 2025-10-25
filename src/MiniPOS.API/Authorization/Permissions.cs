@@ -26,6 +26,24 @@ namespace MiniPOS.API.Authorization
             public const string Delete = "Users.Delete";
         }
 
+        public static class Roles
+        {
+            public const string View = "Roles.View";
+            public const string Create = "Roles.Create";
+            public const string Update = "Roles.Update";
+            public const string Delete = "Roles.Delete";
+        }
+
+        public static class Shops
+        {
+            public const string View = "Shops.View";
+            // navbar admin
+            public const string ViewPage = "Shops.ViewPage";
+            public const string Create = "Shops.Create";
+            public const string Update = "Shops.Update";
+            public const string Delete = "Shops.Delete";
+        }
+
         public static IEnumerable<string> GetAllPermissions()
         {
             return new[]
@@ -34,16 +52,27 @@ namespace MiniPOS.API.Authorization
                 Categories.Create,
                 Categories.Update,
                 Categories.Delete,
-                
+
                 Stores.View,
                 Stores.Create,
                 Stores.Update,
                 Stores.Delete,
-                
+
                 Users.View,
                 Users.Create,
                 Users.Update,
-                Users.Delete
+                Users.Delete,
+
+                Roles.View,
+                Roles.Create,
+                Roles.Update,
+                Roles.Delete,
+
+                Shops.View,
+                Shops.Create,
+                Shops.Update,
+                Shops.Delete,
+                Shops.ViewPage  
             };
         }
     }

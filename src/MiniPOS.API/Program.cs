@@ -2,6 +2,12 @@ using MiniPOS.API.Configuration;
 using MiniPOS.API.Domain;
 using Serilog;
 
+// Ensure correct working directory (important for EF & macOS/Linux)
+Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+
+// Ensure logs folder exists to prevent Serilog crashes
+Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "logs"));
+
 // Configure minimal bootstrap logger for startup only
 LoggingConfiguration.ConfigureBootstrapLogger();
 
@@ -27,6 +33,14 @@ try
 
     builder.Services.AddMemoryCache();
 
+    builder.WebHost.UseKestrel(options =>
+    {
+        options.AddServerHeader = false;
+        options.Limits.MaxConcurrentConnections = 100;
+        options.Limits.MaxConcurrentUpgradedConnections = 50;
+        options.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10 MB
+        options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(15);
+    });
 
     var app = builder.Build();
 
@@ -39,7 +53,6 @@ try
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "MiniPOS API v1");
         options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
-        
     });
 
     app.UseHttpsRedirection();
@@ -47,31 +60,38 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    try
-    {
-        // Initialize Database & Seed Data
-        await DatabaseInitializer.InitializeAsync(app.Services);
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "An error occurred while initializing the database");
-        throw;
-    }
+    // ⚡ Prevent EF Core design-time host from running full startup logic
+    var isEfMigrations = app.Environment.IsEnvironment("EFMigrations");
 
-    app.MapControllers();
+    if (!isEfMigrations)
+    {
+        try
+        {
+            // Initialize Database & Seed Data
+            await DatabaseInitializer.InitializeAsync(app.Services);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "An error occurred while initializing the database");
+            throw;
+        }
 
-    Log.Information("MiniPOS API started successfully");
-    app.Run();
+        app.MapControllers();
+
+        Log.Information("MiniPOS API started successfully");
+        app.Run();
+    }
+    else
+    {
+        Log.Information("EF Migrations environment detected — skipping full startup.");
+    }
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "MiniPOS API terminated unexpectedly");
-    
 }
 finally
 {
     Log.Information("MiniPOS API is shutting down");
     Log.CloseAndFlush();
 }
-
-

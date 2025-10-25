@@ -11,7 +11,7 @@ export default function LoadingPage() {
         // Hide after 2 seconds (adjust as needed)
         const timer = setTimeout(() => {
             setIsVisible(false);
-        }, 2000);
+        }, 3000);
 
         return () => clearTimeout(timer);
     }, []);

@@ -9,9 +9,6 @@ using MiniPOS.API.Application.DTOs.User;
 using MiniPOS.API.Common.Constants;
 using MiniPOS.API.Common.Results;
 using MiniPOS.API.Domain;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
 
 public class UserRepository : IUserRepository
 {

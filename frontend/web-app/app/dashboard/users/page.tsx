@@ -1,6 +1,6 @@
 // app/dashboard/users/page.tsx
+import { getRoles } from "@/app/actions/roleActions";
 import UsersList from "./UsersList";
-import { getRoles } from "@/app/actions/roleAction";
 import { getUsers } from "@/app/actions/userAction";
 
 export const dynamic = "force-dynamic";

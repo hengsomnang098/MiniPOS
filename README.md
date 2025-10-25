@@ -231,9 +231,8 @@ volumes:
 docker-compose up -d
 
 # Create and apply migrations
-cd src/MiniPOS.API
-dotnet ef migrations add InitialCreate
-dotnet ef database update
+dotnet ef migrations add InitTable --project src/MiniPOS.API.Domain --startup-project src/MiniPOS.API
+dotnet ef database update --project src/MiniPOS.API.Domain --startup-project src/MiniPOS.API
 ```
 
 ## Configuration keys and defaults

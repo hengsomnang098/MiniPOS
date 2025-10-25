@@ -1,3 +1,5 @@
+"use server";
+
 import { FetchWrapper } from "@/lib/fetchWrapper";
 import { Roles } from "@/types/role";
 import { Permissions } from "@/types/permission";
@@ -10,14 +12,14 @@ export async function getRoles(): Promise<Roles[]> {
 }
 
 export async function getRole(id: string): Promise<Roles> {
-  return fetchWrapper.get(`${baseUrl}/${id}`);
+  return fetchWrapper.getById(baseUrl, id);
 }
 
-export async function createRole(role: { name: string; permissions: string[] }): Promise<Roles> {
-  return fetchWrapper.post(baseUrl, role);
+export async function createRole(data : Partial<Roles>): Promise<Roles> {
+  return fetchWrapper.post(baseUrl, data);
 }
 
-export async function updateRole(id: string, role: { name: string; permissions: string[] }): Promise<Roles> {
+export async function updateRole(id: string, role: Partial<Roles>): Promise<Roles> {
   return fetchWrapper.put(`${baseUrl}/${id}`, role);
 }
 

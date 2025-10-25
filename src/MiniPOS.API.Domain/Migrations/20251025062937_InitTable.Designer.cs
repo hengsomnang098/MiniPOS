@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MiniPOS.API.Domain.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251021101800_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251025062937_InitTable")]
+    partial class InitTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -167,9 +167,6 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("ApplicationRoleId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -222,8 +219,6 @@ namespace MiniPOS.API.Domain.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ApplicationRoleId");
-
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -245,12 +240,12 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Property<string>("CategoryName")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("StoreId")
+                    b.Property<Guid>("ShopId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StoreId");
+                    b.HasIndex("ShopId");
 
                     b.ToTable("Categories");
                 });
@@ -287,24 +282,47 @@ namespace MiniPOS.API.Domain.Migrations
                     b.ToTable("RolePermissions");
                 });
 
-            modelBuilder.Entity("MiniPOS.API.Domain.Store", b =>
+            modelBuilder.Entity("MiniPOS.API.Domain.Shop", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("StoreName")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
                         .HasColumnType("text");
 
-                    b.Property<string>("StoreType")
-                        .HasColumnType("text");
+                    b.Property<DateTime>("SubscriptionEndDate")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("text");
+                    b.Property<DateTime>("SubscriptionStartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Stores");
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Shops");
+                });
+
+            modelBuilder.Entity("MiniPOS.API.Domain.ShopUser", b =>
+                {
+                    b.Property<Guid>("ShopId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ShopId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ShopUsers");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -360,12 +378,8 @@ namespace MiniPOS.API.Domain.Migrations
 
             modelBuilder.Entity("MiniPOS.API.Domain.ApplicationUser", b =>
                 {
-                    b.HasOne("MiniPOS.API.Domain.ApplicationRole", null)
-                        .WithMany("Users")
-                        .HasForeignKey("ApplicationRoleId");
-
                     b.HasOne("MiniPOS.API.Domain.ApplicationRole", "Role")
-                        .WithMany()
+                        .WithMany("Users")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -375,13 +389,13 @@ namespace MiniPOS.API.Domain.Migrations
 
             modelBuilder.Entity("MiniPOS.API.Domain.Category", b =>
                 {
-                    b.HasOne("MiniPOS.API.Domain.Store", "Store")
-                        .WithMany("Categories")
-                        .HasForeignKey("StoreId")
+                    b.HasOne("MiniPOS.API.Domain.Shop", "Shop")
+                        .WithMany()
+                        .HasForeignKey("ShopId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Store");
+                    b.Navigation("Shop");
                 });
 
             modelBuilder.Entity("MiniPOS.API.Domain.RolePermission", b =>
@@ -403,6 +417,36 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("MiniPOS.API.Domain.Shop", b =>
+                {
+                    b.HasOne("MiniPOS.API.Domain.ApplicationUser", "User")
+                        .WithMany("Shops")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MiniPOS.API.Domain.ShopUser", b =>
+                {
+                    b.HasOne("MiniPOS.API.Domain.Shop", "Shop")
+                        .WithMany("ShopUsers")
+                        .HasForeignKey("ShopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MiniPOS.API.Domain.ApplicationUser", "User")
+                        .WithMany("ShopUsers")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Shop");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MiniPOS.API.Domain.ApplicationRole", b =>
                 {
                     b.Navigation("RolePermissions");
@@ -410,14 +454,21 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Navigation("Users");
                 });
 
+            modelBuilder.Entity("MiniPOS.API.Domain.ApplicationUser", b =>
+                {
+                    b.Navigation("ShopUsers");
+
+                    b.Navigation("Shops");
+                });
+
             modelBuilder.Entity("MiniPOS.API.Domain.Permission", b =>
                 {
                     b.Navigation("RolePermissions");
                 });
 
-            modelBuilder.Entity("MiniPOS.API.Domain.Store", b =>
+            modelBuilder.Entity("MiniPOS.API.Domain.Shop", b =>
                 {
-                    b.Navigation("Categories");
+                    b.Navigation("ShopUsers");
                 });
 #pragma warning restore 612, 618
         }

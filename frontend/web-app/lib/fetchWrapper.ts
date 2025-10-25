@@ -118,22 +118,23 @@ async function request(method: string, url: string, body?: any) {
         const response = await fetch(baseUrl + url, options);
         return await handleResponse(response);
     } catch (error: any) {
-        // Handle network errors (backend down, no connection, etc.)
         console.error("Network or server error:", error);
 
-        // Detect fetch/network-level failure (no response)
         if (error instanceof TypeError || error.code === "ECONNREFUSED") {
-            // Redirect to your custom 500 page
             redirect("/500");
         }
 
-        // Re-throw other known structured errors
         throw error;
     }
 }
 
+/**
+ * Exported FetchWrapper utility
+ */
 export const FetchWrapper = {
     get: (url: string) => request("GET", url),
+
+    getById: (url: string, id: string | number) => request("GET", `${url}/${id}`),
     post: (url: string, body?: any) => request("POST", url, body),
     put: (url: string, body?: any) => request("PUT", url, body),
     del: (url: string) => request("DELETE", url),

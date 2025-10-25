@@ -4,8 +4,8 @@ namespace MiniPOS.API.Domain
     {
         public string CategoryName { get; set; }
 
-        public Guid StoreId { get; set; }
+        public Guid ShopId { get; set; }
+        public Shop Shop { get; set; }
 
-        public Store Store { get; set; }
     }
 }
