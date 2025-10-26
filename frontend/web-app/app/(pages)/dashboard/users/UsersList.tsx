@@ -48,19 +48,11 @@ export default function UsersList({
           description: `${result.data!.fullName} added successfully.`,
         });
       } else {
-        if (result.validationErrors) {
-          toast({
-            title: "Validation Error",
-            description: Object.values(result.validationErrors).flat().join(", "),
-            variant: "destructive",
-          });
-        } else {
-          toast({
+        toast({
             title: "Failed to Create User",
             description: result.error || "An unknown error occurred.",
             variant: "destructive",
           });
-        }
       }
     });
   }
@@ -69,15 +61,15 @@ export default function UsersList({
   // Update User
   async function handleUpdate(id: string, data: Partial<Users>) {
     startTransition(async () => {
-      const updated = await updateUser(id, { ...data, id });
-      if (updated) {
-        setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+      const result = await updateUser(id, { ...data, id });
+      if (result && result.success && result.data) {
+        setUsers((prev) => prev.map((u) => (u.id === id ? result.data! : u)));
         setEditingUser(null);
-        toast({ title: "User Updated", description: `${updated.fullName} updated.` });
+        toast({ title: "User Updated", description: `${result.data.fullName} updated.` });
       } else {
         toast({
           title: "Failed to Update User",
-          description: "An error occurred.",
+          description: (result && result.error) || "An error occurred.",
           variant: "destructive",
         });
       }
@@ -88,13 +80,13 @@ export default function UsersList({
   async function handleDelete(id: string) {
     startTransition(async () => {
       const ok = await deleteUser(id);
-      if (ok) {
+      if (ok.success) {
         setUsers((prev) => prev.filter((u) => u.id !== id));
         toast({ title: "User Deleted", description: "User removed successfully." });
       } else {
         toast({
           title: "Failed to Delete User",
-          description: "An error occurred.",
+          description: (ok && ok.error) || "An error occurred.",
           variant: "destructive",
         });
       }

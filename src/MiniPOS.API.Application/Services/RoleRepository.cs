@@ -177,6 +177,8 @@ namespace MiniPOS.API.Application.Services
             var role = await _context.Roles
                 .Include(r => r.Users)
                 .FirstOrDefaultAsync(r => r.Id == id);
+            if (role.Name == "Super Admin")
+                return Result<bool>.Failure(new Error(ErrorCodes.BadRequest, "Cannot delete Super Admin role"));
 
             if (role == null)
                 return Result<bool>.Failure(new Error(ErrorCodes.NotFound, "Role not found"));

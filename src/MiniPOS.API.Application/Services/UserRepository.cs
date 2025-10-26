@@ -35,6 +35,42 @@ public class UserRepository : IUserRepository
         _context = context;
         _cache = cache;
     }
+    public async Task<Result<IEnumerable<GetUserDto>>> GetAllAsync()
+    {
+        // ✅ Try to get from cache first
+        if (_cache.TryGetValue("all_users", out IEnumerable<GetUserDto> cachedUsers))
+        {
+            return Result<IEnumerable<GetUserDto>>.Success(cachedUsers);
+        }
+
+        // Otherwise fetch from DB
+        var users = await _context.Users
+            .AsNoTracking()
+            .ProjectTo<GetUserDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+
+        // ✅ Cache results for 5 minutes
+        _cache.Set("all_users", users, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+        });
+
+        return Result<IEnumerable<GetUserDto>>.Success(users);
+    }
+
+    public async Task<Result<GetUserDto>> GetByIdAsync(Guid id)
+    {
+        var user = await _context.Users
+            .AsNoTracking()
+            .Include(u => u.Role)
+            .Where(u => u.Id == id)
+            .ProjectTo<GetUserDto>(_mapper.ConfigurationProvider)
+            .FirstOrDefaultAsync();
+
+        return user != null
+            ? Result<GetUserDto>.Success(user)
+            : Result<GetUserDto>.Failure(new Error(ErrorCodes.NotFound, "User not found."));
+    }
 
     // ✅ Create user with cached roles
     public async Task<Result<GetUserDto>> CreateUserAsync(CreateUserDto request, string createdBy)
@@ -96,9 +132,14 @@ public class UserRepository : IUserRepository
     public async Task<Result> DeleteAsync(Guid id)
     {
         var user = await _userManager.FindByIdAsync(id.ToString());
+        if (user.RoleId == Guid.Parse("11111111-1111-1111-1111-111111111111")) // Super Admin Role Id
+        {
+            _logger.LogWarning("Attempt to delete Super Admin user with ID {RoleId}", user.RoleId);
+            return Result.Failure(new Error(ErrorCodes.Validation, "Cannot delete Super Admin user."));
+        }
         if (user == null)
         {
-            return Result.Failure(new Error(ErrorCodes.NotFound, "User not found."));
+            return Result.NotFound(new Error(ErrorCodes.NotFound, "User not found."));
         }
 
         var deleteResult = await _userManager.DeleteAsync(user);
@@ -114,42 +155,7 @@ public class UserRepository : IUserRepository
         return Result.Success();
     }
 
-    public async Task<Result<IEnumerable<GetUserDto>>> GetAllAsync()
-    {
-        // ✅ Try to get from cache first
-        if (_cache.TryGetValue("all_users", out IEnumerable<GetUserDto> cachedUsers))
-        {
-            return Result<IEnumerable<GetUserDto>>.Success(cachedUsers);
-        }
 
-        // Otherwise fetch from DB
-        var users = await _context.Users
-            .AsNoTracking()
-            .ProjectTo<GetUserDto>(_mapper.ConfigurationProvider)
-            .ToListAsync();
-
-        // ✅ Cache results for 5 minutes
-        _cache.Set("all_users", users, new MemoryCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        });
-
-        return Result<IEnumerable<GetUserDto>>.Success(users);
-    }
-
-    public async Task<Result<GetUserDto>> GetByIdAsync(Guid id)
-    {
-        var user = await _context.Users
-            .AsNoTracking()
-            .Include(u => u.Role)
-            .Where(u => u.Id == id)
-            .ProjectTo<GetUserDto>(_mapper.ConfigurationProvider)
-            .FirstOrDefaultAsync();
-
-        return user != null
-            ? Result<GetUserDto>.Success(user)
-            : Result<GetUserDto>.Failure(new Error(ErrorCodes.NotFound, "User not found."));
-    }
 
     public async Task<Result<GetUserDto>> UpdateUserAsync(UpdateUserDto request, Guid id)
     {

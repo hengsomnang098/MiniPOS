@@ -1,4 +1,4 @@
-import { LucideIcon, Users, Store, TagIcon, ShieldCheck } from "lucide-react";
+import { LucideIcon, Users, Store, ShieldCheck } from "lucide-react";
 
 export interface SidebarItem {
     title: string;
@@ -14,19 +14,13 @@ export interface SidebarGroup {
 
 export const sidebarGroups: SidebarGroup[] = [
     {
-        title: "Management",
+        title: "Management Store",
         items: [
             {
-                title: "Stores",
-                href: "/dashboard/stores",
+                title: "Shops",
+                href: "/dashboard/shops",
                 icon: Store,
-                permission: "Stores.View",
-            },
-            {
-                title: "Categories",
-                href: "/dashboard/categories",
-                icon: TagIcon,
-                permission: "Categories.View",
+                permission: "Shops.ViewPage",
             },
         ],
     },

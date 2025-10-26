@@ -18,10 +18,12 @@ namespace MiniPOS.API.Controllers
     public class ShopController : BaseApiController
     {
         private readonly IShopRepository _shopRepository;
+        private readonly ILogger<ShopController> _logger;
 
-        public ShopController(IShopRepository shopRepository)
+        public ShopController(IShopRepository shopRepository,ILogger<ShopController> logger) 
         {
             _shopRepository = shopRepository;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -31,6 +33,7 @@ namespace MiniPOS.API.Controllers
             [FromQuery] int pageSize = 10)
         {
             var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            _logger.LogInformation($"Fetching shops for user: {userIdValue}");
 
             if (string.IsNullOrWhiteSpace(userIdValue))
                 return Unauthorized("User ID claim is missing.");

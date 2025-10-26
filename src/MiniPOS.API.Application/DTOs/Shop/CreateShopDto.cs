@@ -10,5 +10,10 @@ namespace MiniPOS.API.Application.DTOs.Shop
 
         [Required]
         public Guid UserId { get; set; } // Owner ID
+        public DateTime SubscriptionStartDate { get; set; }
+        public DateTime SubscriptionEndDate { get; set; }
+
+        [Required]
+        public bool IsActive { get; set; }
     }
 }

@@ -16,18 +16,10 @@ namespace MiniPOS.API.Application
 
             // 🏪 Shop Mappings
             CreateMap<Shop, GetShopDto>()
-                .ForMember(dest => dest.OwnerName,
-                    opt => opt.MapFrom(src => src.User != null ? src.User.FullName : "Unknown"))
-                .ForMember(dest => dest.IsActive,
-                    opt => opt.MapFrom(src => src.SubscriptionEndDate > DateTime.UtcNow));
-
-            CreateMap<CreateShopDto, Shop>()
-                .ForMember(dest => dest.User, opt => opt.Ignore())
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(_ => Guid.NewGuid()))
-                .ForMember(dest => dest.SubscriptionStartDate, opt => opt.MapFrom(_ => DateTime.UtcNow))
-                .ForMember(dest => dest.SubscriptionEndDate, opt => opt.MapFrom(_ => DateTime.UtcNow.AddYears(1)))
-                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(_ => DateTime.UtcNow));
+                .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User.FullName));
+
+            CreateMap<CreateShopDto, Shop>();
 
 
             CreateMap<UpdateShopDto, Shop>()

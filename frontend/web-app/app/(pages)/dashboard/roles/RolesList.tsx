@@ -41,7 +41,7 @@ export function RolesList({
         startTransition(async () => {
             const result = await createRole(data);
 
-            if (result) {
+            if (result && !('error' in result)) {
                 setRoles((prev) => [...prev, result]);
                 toast({
                     title: "✅ Role Created",
@@ -50,7 +50,7 @@ export function RolesList({
             } else {
                 toast({
                     title: "Failed to Create Role",
-                    description: "An unknown error occurred.",
+                    description: (result && 'error' in result && result.error) || "An unknown error occurred.",
                     variant: "destructive",
                 });
             }
@@ -61,7 +61,7 @@ export function RolesList({
         startTransition(async () => {
             const result = await updateRole(id, data);
 
-            if (result) {
+            if (result && !('error' in result)) {
                 setRoles((prev) =>
                     prev.map((role) => (role.id === id ? result : role))
                 );
@@ -72,7 +72,7 @@ export function RolesList({
             } else {
                 toast({
                     title: "Failed to Update Role",
-                    description: "An unknown error occurred.",
+                    description: (result && 'error' in result && result.error) || "An unknown error occurred.",
                     variant: "destructive",
                 });
             }
@@ -81,22 +81,24 @@ export function RolesList({
 
     async function handleDelete(id: string) {
         startTransition(async () => {
-            const success = await deleteRole(id);
-            if (success) {
+            const result = await deleteRole(id);
+
+            if (result.success) {
                 setRoles((prev) => prev.filter((role) => role.id !== id));
                 toast({
                     title: "✅ Role Deleted",
-                    description: `Role deleted successfully.`,
+                    description: "Role deleted successfully.",
                 });
             } else {
                 toast({
                     title: "Failed to Delete Role",
-                    description: "An unknown error occurred.",
+                    description: result.error || "An unknown error occurred.",
                     variant: "destructive",
                 });
             }
         });
     }
+
 
     return (
         <div className="space-y-4">

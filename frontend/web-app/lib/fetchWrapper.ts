@@ -1,6 +1,5 @@
 // utils/fetch-wrapper.ts
 import { auth } from "@/app/auth";
-import { redirect } from "next/navigation";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -121,7 +120,7 @@ async function request(method: string, url: string, body?: any) {
         console.error("Network or server error:", error);
 
         if (error instanceof TypeError || error.code === "ECONNREFUSED") {
-            redirect("/500");
+            throw new Error("Network connection failed. Please try again later.");
         }
 
         throw error;

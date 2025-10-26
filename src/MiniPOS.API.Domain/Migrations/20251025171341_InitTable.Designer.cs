@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MiniPOS.API.Domain.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251025062937_InitTable")]
+    [Migration("20251025171341_InitTable")]
     partial class InitTable
     {
         /// <inheritdoc />
@@ -290,6 +290,9 @@ namespace MiniPOS.API.Domain.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");

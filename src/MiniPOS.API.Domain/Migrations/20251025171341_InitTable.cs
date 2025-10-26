@@ -211,6 +211,7 @@ namespace MiniPOS.API.Domain.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     SubscriptionStartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     SubscriptionEndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
