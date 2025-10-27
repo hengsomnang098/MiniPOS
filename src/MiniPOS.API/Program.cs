@@ -33,14 +33,14 @@ try
 
     builder.Services.AddMemoryCache();
 
-    builder.WebHost.UseKestrel(options =>
-    {
-        options.AddServerHeader = false;
-        options.Limits.MaxConcurrentConnections = 100;
-        options.Limits.MaxConcurrentUpgradedConnections = 50;
-        options.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10 MB
-        options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(15);
-    });
+    // builder.WebHost.UseKestrel(options =>
+    // {
+    //     options.AddServerHeader = false;
+    //     options.Limits.MaxConcurrentConnections = 100;
+    //     options.Limits.MaxConcurrentUpgradedConnections = 50;
+    //     options.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10 MB
+    //     options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(15);
+    // });
 
     var app = builder.Build();
 

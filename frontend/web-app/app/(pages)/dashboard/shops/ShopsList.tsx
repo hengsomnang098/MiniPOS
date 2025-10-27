@@ -5,7 +5,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Shops } from "@/types/shop";
 import { useState, useTransition } from "react";
 import LoadingPage from "../loading";
-import { DataTable } from "@/components/DataTable";
+
 import {
     AlertDialog,
     AlertDialogTrigger,
@@ -19,9 +19,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PageResult } from "@/types/pageResult";
 import AppPagination from "@/components/AppPagination";
-import { ShopFormDialog } from "./ShopFormDialog";
+
 import { createShop, deleteShop, updateShop } from "@/app/actions/shopAction";
 import { Users } from "@/types/user";
+import dynamic from "next/dynamic";
+
+import { DataTable } from "@/components/DataTable";
+// import { ShopFormDialog } from "./ShopFormDialog";
+
+const ShopFormDialog = dynamic(() => import("./ShopFormDialog").then(m => m.ShopFormDialog), {
+    ssr: false,
+    loading: () => <LoadingPage />,
+});
 
 interface ShopsListProps {
     initialShops: PageResult<Shops>;
@@ -39,28 +48,61 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
 
     async function handleCreate(data: Partial<Shops>) {
         startTransition(async () => {
-            try{
-                const result = await createShop(data);
-            setShops((prev) => [...prev, result]);
-                toast({
-                    title: "✅ Shop Created",
-                    description: `${result.name} added successfully.`,
-                });
-            } catch (error) {
-                console.log(error)
+            const result = await createShop(data);
+
+            if (!result.success) {
+                // Validation failed or other error
+                if (result.validationErrors) {
+                    // Pass this to your form dialog to display
+                    toast({
+                        title: "Validation Error",
+                        description: Object.values(result.validationErrors)
+                            .flat()
+                            .join(", "),
+                        variant: "destructive",
+                    });
+                } else {
+                    toast({
+                        title: "Error",
+                        description: result.error || "Failed to create shop",
+                        variant: "destructive",
+                    });
+                }
+                return;
             }
-        })
+
+            // ✅ Success
+            setShops((prev) => [...prev, result]);
+            toast({
+                title: "✅ Shop Created",
+                description: `${result.name} added successfully.`,
+            });
+        });
     }
+
 
     async function handleUpdate(id: string, data: Partial<Shops>) {
         startTransition(async () => {
-            try{
-                const result = await updateShop(id,{...data, id});
-            setShops((prev) => prev.map((shop) => (shop.id === id ? result : shop)));
-                toast({
-                    title: "✅ Shop Updated",
-                    description: `${result.name} updated successfully.`,
-                });
+            try {
+                const result = await updateShop(id, { ...data, id });
+                if (result.success) {
+                    toast({
+                        title: "✅ Shop Updated",
+                        description: `${data.name} updated successfully.`,
+                    });
+                    setEditingShop(null);
+                } else {
+                    toast({
+                        title: "Error",
+                        description: result.error || "Failed to update shop",
+                        variant: "destructive",
+                    });
+                    return;
+                }
+
+                setShops((prev) =>
+                    prev.map((shop) => (shop.id === id ? { ...shop, ...data } : shop))
+                );
             } catch (error) {
                 console.log(error)
             }
@@ -102,7 +144,7 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
             } else {
                 toast({
                     title: "Failed to Delete Shop",
-                    description: result.error || "An unknown error occurred.",
+                    description: result.error || "An unknown error occurred on delete shop.",
                     variant: "destructive",
                 });
             }
@@ -135,20 +177,38 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
                     {
                         key: "isActive",
                         label: "Status",
-                        render: (shop) => (shop.isActive ? "Active" : "Inactive"),
+                        render: (shop) => ((shop as Shops).isActive ? "Active" : "Inactive"),
+                    },
+                    {
+                        key: "asignedUsers",
+                        label: "Asigned Users",
+                        render: (shop) => (
+                            <>
+                                <PermissionButton
+                                    size="sm"
+                                    // variant="outline"
+                                    permission="Shops.View"
+                                    className="bg-blue-800 text-white hover:bg-blue-900 hover:text-white"
+                                    href={`/dashboard/shops/${shop.id}`}
+                                >
+                                    Asign Users
+                                </PermissionButton>
+                            </>
+                        )
                     },
                     {
                         key: "actions",
                         label: "Actions",
-                        className: "text-right",
+                        className: "text-center",
                         render: (shop) => (
                             <div className="space-x-2 text-right">
                                 <PermissionButton
                                     size="sm"
                                     variant="outline"
                                     permission="Shops.Update"
+                                    className="bg-yellow-500 hover:bg-yellow-300 text-white"
                                     onClick={() => {
-                                        setEditingShop(shop);
+                                        setEditingShop(shop as Shops);
                                         setOpen(true);
                                     }}
                                 >
@@ -169,13 +229,13 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                Permanently remove <strong>{shop.name}</strong>?
+                                                Permanently remove <strong>{(shop as Shops).name}</strong>?
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                                             <AlertDialogAction
-                                                onClick={() => handleDelete(shop.id)}
+                                                onClick={() => handleDelete((shop as Shops).id)}
                                                 className="bg-destructive text-white hover:bg-destructive/90"
                                             >
                                                 Delete

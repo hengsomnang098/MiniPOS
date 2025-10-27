@@ -127,7 +127,7 @@ export function ShopFormDialog({
       <Controller
         name="name"
         control={control}
-        rules={{ required: "Shop Name is required" }}
+        // rules={{ required: "Shop Name is required" }}
         render={({ field }) => (
           <FormInput
             id="name"

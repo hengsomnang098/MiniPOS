@@ -13,7 +13,7 @@ public class AuthController(IAuthRepository authRepository) : BaseApiController
 {
     [HttpPost("login")]
     [EnableRateLimiting(RateLimitingConstants.FixedPolicy)]
-    public async Task<ActionResult<AuthResponseDto>> Login(LoginUserDto dto)
+    public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginUserDto dto)
     {
         var result = await authRepository.LoginAsync(dto);
         return ToActionResult(result);

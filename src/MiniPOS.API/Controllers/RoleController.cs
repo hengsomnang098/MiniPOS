@@ -34,7 +34,7 @@ namespace MiniPOS.API.Controllers
         // GET: api/Role/{id}
         [HttpGet("{id}")]
         [HasPermission(Roles.View)]
-        public async Task<ActionResult<GetRoleDto>> GetRole(Guid id)
+        public async Task<ActionResult<GetRoleDto>> GetRole([FromRoute] Guid id)
         {
             var result = await _roleRepository.GetByIdAsync(id);
             return ToActionResult(result);
@@ -43,7 +43,7 @@ namespace MiniPOS.API.Controllers
         // POST: api/Role
         [HttpPost]
         [HasPermission(Roles.Create)]
-        public async Task<ActionResult<GetRoleDto>> CreateRole(CreateRoleDto createDto)
+        public async Task<ActionResult<GetRoleDto>> CreateRole([FromBody] CreateRoleDto createDto)
         {
             var result = await _roleRepository.CreateAsync(createDto);
             return ToActionResult(result);
@@ -52,7 +52,7 @@ namespace MiniPOS.API.Controllers
         // PUT: api/Role/{id}
         [HttpPut("{id}")]
         [HasPermission(Roles.Update)]
-        public async Task<ActionResult<GetRoleDto>> UpdateRole(Guid id, UpdateRoleDto updateDto)
+        public async Task<ActionResult<GetRoleDto>> UpdateRole([FromRoute] Guid id, [FromBody] UpdateRoleDto updateDto)
         {
             var result = await _roleRepository.UpdateAsync(id, updateDto);
             return ToActionResult(result);
@@ -61,7 +61,7 @@ namespace MiniPOS.API.Controllers
         // DELETE: api/Role/{id}
         [HttpDelete("{id}")]
         [HasPermission(Roles.Delete)]
-        public async Task<ActionResult<bool>> DeleteRole(Guid id)
+        public async Task<ActionResult<bool>> DeleteRole([FromRoute] Guid id)
         {
             var result = await _roleRepository.DeleteAsync(id);
             return ToActionResult(result);
@@ -79,7 +79,7 @@ namespace MiniPOS.API.Controllers
         // GET: api/Role/{id}/permissions
         [HttpGet("{id}/permissions")]
         [HasPermission(Roles.View)]
-        public async Task<ActionResult<List<PermissionDto>>> GetRolePermissions(Guid id)
+        public async Task<ActionResult<List<PermissionDto>>> GetRolePermissions([FromRoute] Guid id)
         {
             var result = await _roleRepository.GetRolePermissionsAsync(id);
             return ToActionResult(result);

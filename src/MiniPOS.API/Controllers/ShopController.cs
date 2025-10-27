@@ -49,28 +49,28 @@ namespace MiniPOS.API.Controllers
 
         [HttpGet("{id}")]
         [HasPermission(Shops.View)]
-        public async Task<ActionResult<GetShopDto>> GetShop(Guid id)
+        public async Task<ActionResult<GetShopDto>> GetShop([FromRoute] Guid id)
         {
             return ToActionResult(await _shopRepository.GetByIdAsync(id));
         }
 
         [HttpPost]
         [HasPermission(Shops.Create)]
-        public async Task<ActionResult<GetShopDto>> CreateShop(CreateShopDto dto)
+        public async Task<ActionResult<GetShopDto>> CreateShop([FromBody] CreateShopDto dto)
         {
             return ToActionResult(await _shopRepository.CreateAsync(dto));
         }
 
         [HttpPut("{id}")]
         [HasPermission(Shops.Update)]
-        public async Task<ActionResult<GetShopDto>> UpdateShop(Guid id, UpdateShopDto dto)
+        public async Task<ActionResult<GetShopDto>> UpdateShop([FromRoute] Guid id, [FromBody] UpdateShopDto dto)
         {
             return ToActionResult(await _shopRepository.UpdateAsync(id, dto));
         }
 
         [HttpDelete("{id}")]
         [HasPermission(Shops.Delete)]
-        public async Task<ActionResult<bool>> DeleteShop(Guid id)
+        public async Task<ActionResult<bool>> DeleteShop([FromRoute] Guid id)
         {
             return ToActionResult(await _shopRepository.DeleteAsync(id));
         }

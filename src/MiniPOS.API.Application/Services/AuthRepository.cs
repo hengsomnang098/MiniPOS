@@ -11,62 +11,79 @@ using MiniPOS.API.Domain;
 using Microsoft.Extensions.Configuration;
 using MiniPOS.API.Application.DTOs.Auth;
 using MiniPOS.API.Application.Contracts;
+using Microsoft.Extensions.Logging;
 
 namespace MiniPOS.API.Application.Services
 {
     public class AuthRepository(
         UserManager<ApplicationUser> userManager,
-        IConfiguration configuration
+        IConfiguration configuration,
+        ILogger<AuthRepository> logger
     ) : IAuthRepository
     {
+        private readonly ILogger<AuthRepository> _logger = logger;
         public async Task<Result<AuthResponseDto>> LoginAsync(LoginUserDto loginUserDto)
         {
-            var user = await userManager.Users
-                .AsNoTracking()
-                .Include(u => u.Role)
-                    .ThenInclude(r => r.RolePermissions)
-                        .ThenInclude(rp => rp.Permission)
-                .FirstOrDefaultAsync(u => u.Email == loginUserDto.Email);
-
-            if (user == null)
-                return Result<AuthResponseDto>.Failure(new Error(ErrorCodes.BadRequest, "Invalid credentials"));
-
-            var valid = await userManager.CheckPasswordAsync(user, loginUserDto.Password);
-            if (!valid)
-                return Result<AuthResponseDto>.Failure(new Error(ErrorCodes.BadRequest, "Invalid credentials"));
-
-            // ✅ 1. Get the role name directly
-            var roles = new List<string>();
-            if (user.Role != null)
-                roles.Add(user.Role.Name!);
-
-            // ✅ 2. Get all permissions from role
-            var permissions = user.Role?.RolePermissions
-                .Select(rp => rp.Permission.Name)
-                .Distinct()
-                .ToList() ?? new List<string>();
-
-            // ✅ 3. Generate token
-            var jwtSettings = configuration.GetSection("JwtSettings");
-            var token = GenerateJwtToken(user, roles, permissions, jwtSettings);
-            var refreshToken = Guid.NewGuid().ToString();
-
-            var response = new AuthResponseDto
+            try
             {
-                AccessToken = token,
-                RefreshToken = refreshToken,
-                ExpiresIn = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["DurationInMinutes"])),
-                User = new UserInfoDto
-                {
-                    Id = user.Id,
-                    Email = user.Email ?? "",
-                    FullName = user.FullName ?? "",
-                    Roles = roles,
-                    Permissions = permissions
-                }
-            };
+                var user = await userManager.Users
+                    .AsNoTracking()
+                    .Include(u => u.Role)
+                    .ThenInclude(r => r.RolePermissions)
+                    .ThenInclude(rp => rp.Permission)
+                    .FirstOrDefaultAsync(u => u.Email == loginUserDto.Email);
 
-            return Result<AuthResponseDto>.Success(response);
+                if (user == null)
+                {
+                    _logger.LogWarning("Login failed for non-existing user with email: {Email}", loginUserDto.Email);
+                    return Result<AuthResponseDto>.Failure(new Error(ErrorCodes.BadRequest, "Invalid credentials"));
+                }
+
+                var valid = await userManager.CheckPasswordAsync(user, loginUserDto.Password);
+                if (!valid)
+                {
+                    _logger.LogWarning("Login failed for user with email: {Email}", loginUserDto.Email);
+                    return Result<AuthResponseDto>.Failure(new Error(ErrorCodes.BadRequest, "Invalid credentials"));
+                }
+
+                // ✅ 1. Get the role name directly
+                var roles = new List<string>();
+                if (user.Role != null)
+                    roles.Add(user.Role.Name!);
+
+                // ✅ 2. Get all permissions from role
+                var permissions = user.Role?.RolePermissions
+                    .Select(rp => rp.Permission.Name)
+                    .Distinct()
+                    .ToList() ?? new List<string>();
+
+                // ✅ 3. Generate token
+                var jwtSettings = configuration.GetSection("JwtSettings");
+                var token = GenerateJwtToken(user, roles, permissions, jwtSettings);
+                var refreshToken = Guid.NewGuid().ToString();
+
+                var response = new AuthResponseDto
+                {
+                    AccessToken = token,
+                    RefreshToken = refreshToken,
+                    ExpiresIn = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["DurationInMinutes"])),
+                    User = new UserInfoDto
+                    {
+                        Id = user.Id,
+                        Email = user.Email ?? "",
+                        FullName = user.FullName ?? "",
+                        Roles = roles,
+                        Permissions = permissions
+                    }
+                };
+
+                return Result<AuthResponseDto>.Success(response);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred during login for email: {Email}", loginUserDto.Email);
+                return Result<AuthResponseDto>.Failure(new Error(ErrorCodes.Failure, "An unexpected error occurred during login."));
+            }
         }
 
         private static string GenerateJwtToken(

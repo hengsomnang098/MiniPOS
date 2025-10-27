@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MiniPOS.API.Domain.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251025171341_InitTable")]
+    [Migration("20251026163149_InitTable")]
     partial class InitTable
     {
         /// <inheritdoc />
@@ -319,6 +319,9 @@ namespace MiniPOS.API.Domain.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
                     b.HasKey("ShopId", "UserId");

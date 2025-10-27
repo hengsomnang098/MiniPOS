@@ -104,7 +104,10 @@ namespace MiniPOS.API.Domain
             await AddMissingRolePermissionsAsync(superAdminRole.Id, allPermissions.Select(p => p.Id));
 
             // Staff gets view access for Stores and Categories
-            var staffPermissionIds = allPermissions.Where(p => p.Name.StartsWith("Stores.") || p.Name.StartsWith("Categories.")).Select(p => p.Id);
+            var staffPermissionIds = allPermissions
+    .Where(p => p.Name.EndsWith(".View", StringComparison.OrdinalIgnoreCase))
+    .Select(p => p.Id);
+
             await AddMissingRolePermissionsAsync(staffRole.Id, staffPermissionIds);
 
             // Persist any new RolePermissions

@@ -318,6 +318,9 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
                     b.HasKey("ShopId", "UserId");
 
                     b.HasIndex("UserId");

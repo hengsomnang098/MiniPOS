@@ -63,29 +63,37 @@ async function handleResponse(response: Response) {
 
     if (response.ok) return data || response.statusText;
 
-    if (response.status === 422 && data?.errors) {
-        throw {
+    // 🧠 Validation errors (ASP.NET, Laravel, etc.)
+    if ((response.status === 400 || response.status === 422) && data?.errors) {
+        return {
+            success: false,
             code: "ValidationError",
-            status: 422,
-            message: "Validation failed",
+            status: response.status,
+            message: data?.title || "Validation failed",
             validationErrors: data.errors,
         };
     }
 
+    // 🔒 Auth errors
     if (response.status === 401 || response.status === 403) {
         return {
+            success: false,
+            code: "Unauthorized",
+            status: response.status,
+            message: "Access denied or session expired",
             redirectTo: "/auth/login",
-            error: "Access denied or session expired",
         };
     }
 
-    const error = {
+    // ❗ Generic failure
+    return {
+        success: false,
         code: getErrorCodeFromStatus(response.status),
         status: response.status,
-        message: data?.message || response.statusText,
+        message: data?.message || data?.title || response.statusText,
     };
 
-    throw error;
+
 }
 
 async function request(method: string, url: string, body?: any) {
@@ -119,11 +127,29 @@ async function request(method: string, url: string, body?: any) {
     } catch (error: any) {
         console.error("Network or server error:", error);
 
-        if (error instanceof TypeError || error.code === "ECONNREFUSED") {
-            throw new Error("Network connection failed. Please try again later.");
+        // 🚨 Return structured response instead of throwing
+        if (
+            error instanceof TypeError ||
+            error?.code === "ECONNREFUSED" ||
+            error?.message?.includes("Failed to fetch") ||
+            error?.message?.includes("NetworkError") ||
+            error?.message?.includes("Load failed")
+        ) {
+            return {
+                success: false,
+                code: "ServerUnavailable",
+                status: 503,
+                message: "Cannot connect to the server. Please try again later.",
+            };
         }
 
-        throw error;
+        return {
+            success: false,
+            code: "Failure",
+            status: 500,
+            message: error?.message || "An unexpected server error occurred.",
+        };
+
     }
 }
 
@@ -132,7 +158,6 @@ async function request(method: string, url: string, body?: any) {
  */
 export const FetchWrapper = {
     get: (url: string) => request("GET", url),
-
     getById: (url: string, id: string | number) => request("GET", `${url}/${id}`),
     post: (url: string, body?: any) => request("POST", url, body),
     put: (url: string, body?: any) => request("PUT", url, body),

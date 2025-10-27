@@ -3,7 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -119,5 +118,32 @@
   }
   body {
     @apply bg-background text-foreground overflow-hidden;
+  }
+  .bg-main-color {
+    @apply bg-linear-to-b from-[#0070cc] via-[#004d99] to-[#0066cc];
+  }
+
+  /* Glowing Ocean Theme 🌊 */
+  .bg-glowing-ocean {
+    @apply bg-linear-to-b from-[#001f3f] via-[#003366] to-[#004c80];
+    /* Deep ocean layers */
+    box-shadow: 0 0 15px rgba(0, 140, 255, 0.25),
+      inset 0 0 12px rgba(0, 200, 255, 0.15);
+  }
+
+  .bg-glowing-ocean-header {
+    @apply bg-linear-to-r from-[#0066cc] via-[#0088cc] to-[#00b3cc];
+    /* Surface shimmer */
+    box-shadow: 0 0 20px rgba(0, 180, 255, 0.4), 0 0 40px rgba(0, 200, 255, 0.2);
+  }
+
+  .text-glowing-ocean {
+    @apply text-[#00bfff];
+    text-shadow: 0 0 6px rgba(0, 200, 255, 0.8);
+  }
+
+  .border-glowing-ocean {
+    border-color: rgba(0, 150, 255, 0.5);
+    box-shadow: 0 0 10px rgba(0, 150, 255, 0.2);
   }
 }

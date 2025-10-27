@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { createRole, deleteRole, updateRole } from "@/app/actions/roleActions"
 import { PermissionButton } from "@/components/permissionButton/PermissionButton"
 import LoadingPage from "../loading"
-import { DataTable } from "@/components/DataTable"
+
 import {
     AlertDialog,
     AlertDialogTrigger,
@@ -19,7 +19,15 @@ import {
     AlertDialogCancel,
     AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import RoleFormDialog from "./RoleFormDialog"
+import { DataTable } from "@/components/DataTable"
+import dynamic from "next/dynamic"
+// import RoleFormDialog from "./RoleFormDialog"
+
+const RoleFormDialog = dynamic(() => import("./RoleFormDialog").then(m => m.default), {
+    ssr: false,
+    loading: () => <LoadingPage />
+})
+
 
 interface RolesClientProps {
     initialRoles: Roles[]
@@ -135,8 +143,9 @@ export function RolesList({
                                     size="sm"
                                     variant="outline"
                                     permission="Roles.Update"
+                                    className="bg-yellow-500 hover:bg-yellow-300"
                                     onClick={() => {
-                                        setEditingRole(role);
+                                        setEditingRole(role as Roles);
                                         setOpen(true);
                                         console.log(role)
                                     }}
@@ -158,13 +167,13 @@ export function RolesList({
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                Permanently remove <strong>{role.name}</strong>?
+                                                Permanently remove <strong>{(role as Roles).name}</strong>?
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                                             <AlertDialogAction
-                                                onClick={() => handleDelete(role.id)}
+                                                onClick={() => handleDelete((role as Roles).id)}
                                                 className="bg-destructive text-white hover:bg-destructive/90"
                                             >
                                                 Delete

@@ -22,14 +22,15 @@ export function Sidebar({
     return (
         <div
             className={cn(
-                "relative flex flex-col h-full bg-slate-900 text-slate-50 transition-all duration-300 ease-in-out border-r border-slate-800",
+                "relative flex flex-col h-full transition-all duration-500 ease-in-out border-r border-slate-800 shadow-[inset_0_0_20px_rgba(0,0,0,0.4)] z-50",
+                "bg-linear-to-b from-[#0f172a] via-[#1e293b] to-[#0a0f1c]",
                 collapsed ? "w-20" : "w-64"
             )}
         >
             {/* Collapse Button */}
             <button
                 onClick={() => setCollapsed?.(!collapsed)}
-                className="absolute -right-3 top-6 bg-slate-800 border border-slate-700 text-slate-300 rounded-full p-1.5 hover:bg-slate-700 transition-all duration-200 hidden md:flex"
+                className="absolute -right-3 top-6 bg-[#1e293b]/90 border border-slate-700 text-slate-300 rounded-full p-1.5 hover:bg-slate-700/70 hover:text-white shadow-md transition-all duration-300 hidden md:flex"
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
                 {collapsed ? (
@@ -40,16 +41,16 @@ export function Sidebar({
             </button>
 
             {/* Header */}
-            <div className={cn("px-4 mb-3 transition-all duration-200", collapsed && "px-2")}>
+            <div className={cn("px-4 mb-3 transition-all duration-300", collapsed && "px-2")}>
                 <h2
                     className={cn(
-                        "text-2xl font-bold tracking-wide mb-2 text-center transition-all duration-300",
+                        "text-2xl font-bold tracking-wide mb-2 mt-2 text-center text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-blue-500 transition-all duration-300",
                         collapsed && "text-lg"
                     )}
                 >
                     {collapsed ? "MP" : "Mini POS"}
                 </h2>
-                <hr className="border-slate-800" />
+                <hr className="border-slate-700/60" />
             </div>
 
             {/* Menu */}
@@ -76,28 +77,37 @@ export function Sidebar({
                                         <Button
                                             key={item.href}
                                             asChild
-                                            variant={isActive ? "secondary" : "ghost"}
+                                            variant="ghost"
                                             className={cn(
-                                                "w-full justify-start transition-all duration-200 ease-in-out rounded-lg group py-3",
+                                                "w-full justify-start transition-all duration-300 ease-in-out rounded-xl group py-3 backdrop-blur-sm",
+                                                "hover:bg-linear-to-r hover:from-cyan-700/30 hover:to-blue-700/30",
+                                                "hover:shadow-[0_0_10px_rgba(56,189,248,0.25)]",
                                                 isActive
-                                                    ? "bg-slate-800 text-white shadow-md"
-                                                    : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                                                    ? "bg-linear-to-r from-cyan-600/40 to-blue-700/40 text-white shadow-[0_0_12px_rgba(56,189,248,0.35)]"
+                                                    : "text-slate-300 hover:text-white",
                                                 collapsed && "justify-center px-0"
                                             )}
                                             title={collapsed ? item.title : ""}
                                         >
                                             <Link
                                                 href={item.href}
-                                                className={cn("flex items-center w-full", collapsed && "justify-center")}
+                                                className={cn(
+                                                    "flex items-center w-full",
+                                                    collapsed && "justify-center"
+                                                )}
                                             >
                                                 <item.icon
                                                     className={cn(
                                                         "h-5 w-5 transition-transform duration-200 group-hover:scale-110",
-                                                        isActive ? "text-white" : "text-slate-400 group-hover:text-white"
+                                                        isActive
+                                                            ? "text-cyan-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.5)]"
+                                                            : "text-slate-400 group-hover:text-cyan-300"
                                                     )}
                                                 />
                                                 {!collapsed && (
-                                                    <span className="ml-3 text-[15px] font-medium">{item.title}</span>
+                                                    <span className="ml-3 text-[15px] font-medium">
+                                                        {item.title}
+                                                    </span>
                                                 )}
                                             </Link>
                                         </Button>
@@ -109,12 +119,6 @@ export function Sidebar({
                 })}
             </div>
 
-            {/* Footer */}
-            {!collapsed && (
-                <div className="px-4 mt-auto pt-4 border-t border-slate-800 text-sm text-slate-500 text-center">
-                    v1.0.0
-                </div>
-            )}
         </div>
     );
 }

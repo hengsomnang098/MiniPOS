@@ -5,8 +5,8 @@ using MiniPOS.API.Application.DTOs.Shop;
 using MiniPOS.API.Common.Results;
 using MiniPOS.API.Domain;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using MiniPOS.API.Common.Constants;
 
 namespace MiniPOS.API.Application.Services
 {
@@ -64,7 +64,7 @@ namespace MiniPOS.API.Application.Services
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (shop == null)
-                return Result<GetShopDto>.NotFound("Shop not found");
+                return Result<GetShopDto>.Failure(new Error(ErrorCodes.NotFound, "Shop not found"));
 
             var dto = _mapper.Map<GetShopDto>(shop);
             if (shop.User == null)
@@ -77,29 +77,40 @@ namespace MiniPOS.API.Application.Services
 
         public async Task<Result<GetShopDto>> CreateAsync(CreateShopDto dto)
         {
-            var user = await _context.Users
+            try
+            {
+                var user = await _context.Users
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == dto.UserId);
-            if (user == null)
-                return Result<GetShopDto>.NotFound("User not found");
+                if (user == null)
+                {
+                    _logger.LogWarning("Shop creation failed: User {UserId} not found.", dto.UserId);
+                    return Result<GetShopDto>.Failure(new Error(ErrorCodes.NotFound, "User not found"));
+                }
 
-            var shop = _mapper.Map<Shop>(dto);
-            shop.UserId = user.Id;
-            shop.SubscriptionStartDate = DateTime.SpecifyKind(dto.SubscriptionStartDate, DateTimeKind.Utc);
-            shop.SubscriptionEndDate = DateTime.SpecifyKind(dto.SubscriptionEndDate, DateTimeKind.Utc);
+                var shop = _mapper.Map<Shop>(dto);
+                shop.UserId = user.Id;
+                shop.SubscriptionStartDate = DateTime.SpecifyKind(dto.SubscriptionStartDate, DateTimeKind.Utc);
+                shop.SubscriptionEndDate = DateTime.SpecifyKind(dto.SubscriptionEndDate, DateTimeKind.Utc);
 
-            _context.Shops.Add(shop);
-            await _context.SaveChangesAsync();
+                _context.Shops.Add(shop);
+                await _context.SaveChangesAsync();
 
-            var createdShop = await _context.Shops
-                .Include(s => s.User)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == shop.Id);
+                var createdShop = await _context.Shops
+                    .Include(s => s.User)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.Id == shop.Id);
 
-            var result = _mapper.Map<GetShopDto>(createdShop);
+                var result = _mapper.Map<GetShopDto>(createdShop);
 
 
-            return Result<GetShopDto>.Success(result);
+                return Result<GetShopDto>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while creating a new shop.");
+                return Result<GetShopDto>.Failure(new Error(ErrorCodes.Failure, "An unexpected error occurred while creating the shop."));
+            }
         }
         public async Task<Result<GetShopDto>> UpdateAsync(Guid id, UpdateShopDto dto)
         {
@@ -115,7 +126,7 @@ namespace MiniPOS.API.Application.Services
             if (existingShop == null)
             {
                 _logger.LogWarning("Shop update failed: Shop {ShopId} not found in database.", id);
-                return Result<GetShopDto>.NotFound("Shop not found");
+                return Result<GetShopDto>.Failure(new Error(ErrorCodes.NotFound, "Shop not found"));
             }
 
             try
@@ -127,19 +138,13 @@ namespace MiniPOS.API.Application.Services
 
                 _context.Entry(existingShop).State = EntityState.Modified;
 
-                _logger.LogInformation("Saving changes for Shop {ShopId}...", id);
 
                 var affectedRows = await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                _logger.LogError(ex, "Concurrency exception while updating Shop {ShopId}", id);
-                return Result<GetShopDto>.Failure(new Error("DbUpdate", "A concurrency error occurred."));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while updating Shop {ShopId}", id);
-                return Result<GetShopDto>.Failure(new Error("Exception", "An unexpected error occurred."));
+                return Result<GetShopDto>.Failure(new Error(ErrorCodes.Failure, "An unexpected error occurred."));
             }
 
             // Reload the updated shop
@@ -151,7 +156,7 @@ namespace MiniPOS.API.Application.Services
             if (updatedShop == null)
             {
                 _logger.LogWarning("Failed to reload updated Shop {ShopId} after update.", id);
-                return Result<GetShopDto>.NotFound("Shop not found after update.");
+                return Result<GetShopDto>.Failure(new Error(ErrorCodes.NotFound, "Shop not found after update"));
             }
 
             _logger.LogInformation("Successfully reloaded Shop {ShopId} after update.", id);
@@ -164,15 +169,22 @@ namespace MiniPOS.API.Application.Services
 
         public async Task<Result<bool>> DeleteAsync(Guid id)
         {
-            var shop = await _context.Shops.FindAsync(id);
-            if (shop == null)
-                return Result<bool>.NotFound("Shop not found");
+            try
+            {
+                var shop = await _context.Shops.FindAsync(id);
+                if (shop == null)
+                    return Result<bool>.Failure(new Error(ErrorCodes.NotFound, "Shop not found"));
 
-            _context.Shops.Remove(shop);
-            await _context.SaveChangesAsync();
+                _context.Shops.Remove(shop);
+                await _context.SaveChangesAsync();
 
-            return Result<bool>.Success(true);
+                return Result<bool>.Success(true);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting Shop {ShopId}.", id);
+                return Result<bool>.Failure(new Error(ErrorCodes.Failure, "An unexpected error occurred while deleting the shop."));
+            }
         }
-
     }
 }

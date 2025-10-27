@@ -50,7 +50,7 @@ export default function RoleFormDialog({ open, setOpen, onSubmit, role, permissi
   if (!hasPermission(requiredPermission)) return null;
 
   // Group permissions by category
-  const groupedPermissions = permissions.reduce((acc, permission) => {
+  const groupedPermissions = permissions?.reduce((acc, permission) => {
     const [category] = permission.name.split('.');
     if (!acc[category]) {
       acc[category] = [];

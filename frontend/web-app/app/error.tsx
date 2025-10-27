@@ -6,7 +6,19 @@ import { AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-export default function Custom500Page() {
+export default function GlobalError({
+    error,
+    reset,
+}: {
+    error: any;
+    reset: () => void;
+}) {
+    const message =
+        error?.code === "ServerUnavailable"
+            ? "Our servers are temporarily unavailable. Please try again later."
+            : error?.message ||
+            "Oops! Something went wrong on our end. Please try again later.";
+
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 px-4 text-center">
             <motion.div
@@ -22,16 +34,15 @@ export default function Custom500Page() {
                                 <AlertTriangle className="h-8 w-8" />
                             </div>
                             <CardTitle className="text-2xl font-semibold text-gray-800">
-                                500 – Internal Server Error
+                                {error?.code === "ServerUnavailable"
+                                    ? "503 – Server Unavailable"
+                                    : "500 – Internal Server Error"}
                             </CardTitle>
                         </div>
                     </CardHeader>
 
                     <CardContent>
-                        <p className="text-gray-500 mb-6">
-                            Oops! Something went wrong on our end. Please try again later or
-                            return to the homepage.
-                        </p>
+                        <p className="text-gray-500 mb-6">{message}</p>
                         <div className="flex justify-center gap-3">
                             <Link href="/">
                                 <Button variant="default" className="rounded-full cursor-pointer">
@@ -41,7 +52,7 @@ export default function Custom500Page() {
                             <Button
                                 variant="outline"
                                 className="rounded-full cursor-pointer"
-                                onClick={() => window.location.reload()}
+                                onClick={() => reset()}
                             >
                                 Retry
                             </Button>

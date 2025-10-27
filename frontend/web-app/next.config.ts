@@ -2,22 +2,45 @@ import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
 
 const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env.ANALYZE === "true", // Only runs when you enable it
+  enabled: process.env.ANALYZE === "true",
 });
 
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  output: "standalone",
+
   images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 31536000,
+    // quality: 60,
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "techhl.b-cdn.net",
-      },
+      { protocol: "https", hostname: "techhl.b-cdn.net" },
     ],
   },
-  // You can re-enable this logging later if needed
-  // logging: {
-  //   fetches: { fullUrl: true },
-  // },
+
+  experimental: {
+    optimizeCss: true,
+    serverActions: { bodySizeLimit: "2mb" },
+  },
+
+  turbopack: {
+    resolveAlias: {
+      "@/components": "./components",
+      "@/lib": "./lib",
+      "@/hooks": "./hooks",
+      '@/types': './types',
+      "@/app": "./app", 
+      "middleware": "./middleware",
+    },
+  },
+
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? { exclude: ["error"] }
+        : false,
+    // transformMixedEsModules: true,
+  },
 };
 
 export default withBundleAnalyzer(nextConfig);

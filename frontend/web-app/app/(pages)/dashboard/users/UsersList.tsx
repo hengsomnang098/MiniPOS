@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { DataTable } from "@/components/DataTable";
 import { Users } from "@/types/user";
 import { Roles } from "@/types/role";
 import { PermissionButton } from "@/components/permissionButton/PermissionButton";
@@ -17,9 +16,17 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { UserFormDialog } from "./UserFormDialog";
 import LoadingPage from "../loading";
 import { createUser, deleteUser, updateUser } from "@/app/actions/userAction";
+// import { UserFormDialog } from "./UserFormDialog";
+import { DataTable } from "@/components/DataTable";
+import dynamic from "next/dynamic";
+
+const UserFormDialog = dynamic(() => import("./UserFormDialog").then(m => m.UserFormDialog), {
+  ssr: false,
+  loading: () => <LoadingPage />
+})
+
 
 interface UsersListProps {
   initialUsers: Users[];
@@ -127,10 +134,11 @@ export default function UsersList({
               <div className="space-x-2 text-right">
                 <PermissionButton
                   size="sm"
-                  variant="outline"
+                  // variant="outline"
                   permission="Users.Update"
+                  className="bg-yellow-500 hover:bg-yellow-300"
                   onClick={() => {
-                    setEditingUser(user);
+                    setEditingUser(user as Users);
                     setOpen(true);
                   }}
                 >
@@ -151,13 +159,17 @@ export default function UsersList({
                     <AlertDialogHeader>
                       <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Permanently remove <strong>{user.fullName}</strong>?
+                        Permanently remove <strong>{(user as Users).fullName}</strong>?
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => {
+                          if (typeof user.id === "string") {
+                            handleDelete(user.id);
+                          }
+                        }}
                         className="bg-destructive text-white hover:bg-destructive/90"
                       >
                         Delete

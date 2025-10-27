@@ -16,13 +16,19 @@ export async function getUsers(): Promise<Users[] | { success: boolean; error?: 
   }
 }
 
-export async function createUser(data: Partial<Users>)
-  : Promise<{ success: boolean; data?: Users; error?: string; validationErrors?: Record<string, string[]>; }> {
+export async function createUser(data: Partial<Users>) {
   try {
     const res = await FetchWrapper.post(base, data);
     return { success: true, data: res };
   } catch (error: any) {
     console.error("Create user error:", error);
+    if (error.code === "ValidationError") {
+      return {
+        success: false,
+        validationErrors: error.validationErrors,
+        error: error.message,
+      };
+    }
     return { success: false, error: error?.message || "An unexpected error occurred." };
   }
 }
@@ -30,12 +36,19 @@ export async function createUser(data: Partial<Users>)
 export async function updateUser(
   id: string,
   data: Partial<Users>
-): Promise<{ success: boolean; data?: Users; error?: string; validationErrors?: Record<string, string[]> }> {
+) {
   try {
     const res = await FetchWrapper.put(`${base}/${id}`, data);
     return { success: true, data: res?.data ?? res };
   } catch (error: any) {
     console.error("Update user error:", error);
+    if (error.code === "ValidationError") {
+      return {
+        success: false,
+        validationErrors: error.validationErrors,
+        error: error.message,
+      };
+    }
     return { success: false, error: error?.message || "An unexpected error occurred." };
   }
 }

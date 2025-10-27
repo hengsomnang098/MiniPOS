@@ -7,8 +7,8 @@ const baseUrl = "/api/role";
 const fetchWrapper = FetchWrapper;
 
 export async function getRoles(): Promise<Roles[]> {
-  try{
-    return fetchWrapper.get(baseUrl);
+  try {
+    return await fetchWrapper.get(baseUrl);
   }
   catch (error: any) {
     console.error("Delete role error:", error);
@@ -18,8 +18,8 @@ export async function getRoles(): Promise<Roles[]> {
 
 export async function getRole(id: string): Promise<Roles & { success: boolean; error?: string }> {
   try {
-    return fetchWrapper.getById(baseUrl, id);
-  } catch (error:any) {
+    return await fetchWrapper.getById(baseUrl, id);
+  } catch (error: any) {
     console.error("Get role error:", error);
     return {
       id: "",
@@ -31,30 +31,38 @@ export async function getRole(id: string): Promise<Roles & { success: boolean; e
   }
 }
 
-export async function createRole(data: Partial<Roles>): Promise<Roles & { success: boolean; error?: string }> {
+export async function createRole(data: Partial<Roles>) {
   try {
-    return fetchWrapper.post(baseUrl, data);
+    return await fetchWrapper.post(baseUrl, data);
   } catch (error: any) {
     console.error("Create role error:", error);
-    return {
-      id: "",
-      name: "",
-      permissionIds: [],
-      success: false,
-      error: error?.message || "An unexpected error On CreateRole.",
+    if (error.code === "ValidationError") {
+      return {
+        success: false,
+        validationErrors: error.validationErrors,
+        error: error.message,
+      };
     }
+    return {
+      success: false,
+      error: error?.message || "An unexpected error occurred.",
+    };
   }
 }
 
-export async function updateRole(id: string, role: Partial<Roles>): Promise<Roles & { success: boolean; error?: string }> {
+export async function updateRole(id: string, role: Partial<Roles>) {
   try {
-    return fetchWrapper.put(`${baseUrl}/${id}`, role);
+    return await fetchWrapper.put(`${baseUrl}/${id}`, role);
   } catch (error: any) {
     console.error("Update role error:", error);
+    if (error.code === "ValidationError") {
+      return {
+        success: false,
+        validationErrors: error.validationErrors,
+        error: error.message,
+      };
+    }
     return {
-      id: "",
-      name: "",
-      permissionIds: [],
       success: false,
       error: error?.message || "An unexpected error occurred.",
     };
@@ -74,7 +82,7 @@ export async function deleteRole(id: string): Promise<{ success: boolean; error?
   }
 }
 
-export async function getAvailablePermissions(): Promise<Permissions[] > {
+export async function getAvailablePermissions(): Promise<Permissions[]> {
   return fetchWrapper.get(`${baseUrl}/permissions`);
 }
 

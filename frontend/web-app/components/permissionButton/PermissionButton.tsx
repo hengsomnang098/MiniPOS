@@ -31,7 +31,7 @@ export function PermissionButton({
         return (
             <Button
                 {...props}
-                className={buttonClass}
+                className={`cursor-pointer ${buttonClass}`}
                 asChild
             >
                 <Link href={href}>
@@ -44,7 +44,7 @@ export function PermissionButton({
     return allowed ? (
         <Button
             {...props}
-            className={buttonClass}
+            className={`cursor-pointer ${buttonClass}`}
         >
             {children}
         </Button>

@@ -1,15 +1,11 @@
 import { getShops } from "@/app/actions/shopAction";
-import { Metadata } from "next";
 import React from "react";
-import ShopsList from "./ShopsList";
+// import ShopsList from "./ShopsList";
 import { getUsers } from "@/app/actions/userAction";
+import ShopsList from "./ShopsList";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Shops Dashboard",
-  description: "Manage your shops",
-};
 
 export default async function Page() {
   // ✅ Just fetch first page once (initial load)

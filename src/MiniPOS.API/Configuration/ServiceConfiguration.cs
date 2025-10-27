@@ -27,6 +27,7 @@ public static class ServiceConfiguration
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IShopRepository, ShopRepository>();
+        services.AddScoped<IShopUserRepository, ShopUserRepository>();
 
         return services;
     }

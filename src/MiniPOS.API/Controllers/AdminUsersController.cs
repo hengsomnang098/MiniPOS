@@ -34,7 +34,7 @@ namespace MiniPOS.API.Controllers
 
         [HttpGet("{id}")]
         [HasPermission(Permissions.Users.View)]
-        public async Task<ActionResult<GetUserDto>> GetById(Guid id)
+        public async Task<ActionResult<GetUserDto>> GetById([FromRoute] Guid id)
         {
             var result = await _userRepository.GetByIdAsync(id);
             return ToActionResult(result);
@@ -42,7 +42,7 @@ namespace MiniPOS.API.Controllers
 
         [HttpDelete("{id}")]
         [HasPermission(Permissions.Users.Delete)]
-        public async Task<ActionResult> Delete(Guid id)
+        public async Task<ActionResult> Delete([FromRoute] Guid id)
         {
             var result = await _userRepository.DeleteAsync(id);
             return ToActionResult(result);
