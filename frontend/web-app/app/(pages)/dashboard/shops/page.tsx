@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Page() {
   // ✅ Just fetch first page once (initial load)
-  const query = "?page=1&pageSize=10";
+  const query = "?page=1&pageSize=5";
   const shops = await getShops(query);
   const userResult = await getUsers();
 

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MiniPOS.API.Domain.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251026163149_InitTable")]
+    [Migration("20251031072733_InitTable")]
     partial class InitTable
     {
         /// <inheritdoc />
@@ -282,6 +282,30 @@ namespace MiniPOS.API.Domain.Migrations
                     b.ToTable("RolePermissions");
                 });
 
+            modelBuilder.Entity("MiniPOS.API.Domain.Service", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CategoryId1")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("CategoryId1");
+
+                    b.ToTable("Services");
+                });
+
             modelBuilder.Entity("MiniPOS.API.Domain.Shop", b =>
                 {
                     b.Property<Guid>("Id")
@@ -423,6 +447,21 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("MiniPOS.API.Domain.Service", b =>
+                {
+                    b.HasOne("MiniPOS.API.Domain.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MiniPOS.API.Domain.Category", null)
+                        .WithMany("Services")
+                        .HasForeignKey("CategoryId1");
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("MiniPOS.API.Domain.Shop", b =>
                 {
                     b.HasOne("MiniPOS.API.Domain.ApplicationUser", "User")
@@ -465,6 +504,11 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Navigation("ShopUsers");
 
                     b.Navigation("Shops");
+                });
+
+            modelBuilder.Entity("MiniPOS.API.Domain.Category", b =>
+                {
+                    b.Navigation("Services");
                 });
 
             modelBuilder.Entity("MiniPOS.API.Domain.Permission", b =>

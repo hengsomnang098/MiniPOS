@@ -8,6 +8,11 @@ const withBundleAnalyzer = bundleAnalyzer({
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
+    logging:{
+    fetches:{
+      fullUrl:true
+    }
+  },
 
   images: {
     formats: ["image/avif", "image/webp"],

@@ -34,8 +34,8 @@ export async function middleware(req: NextRequest) {
       // Optionally clear cookies
       const response = NextResponse.redirect(new URL("/auth/login", req.url));
       response.cookies.delete("authjs.session-token");
-      response.cookies.delete("__Secure-authjs.session-token");
       response.cookies.delete("authjs.callback-url");
+      response.cookies.delete("activeShopId")
       return response;
     }
   }

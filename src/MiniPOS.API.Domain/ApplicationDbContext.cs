@@ -15,6 +15,7 @@ namespace MiniPOS.API.Domain
         public DbSet<ShopUser> ShopUsers { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<Service> Services { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -79,6 +80,12 @@ namespace MiniPOS.API.Domain
                 .HasOne(su => su.User)
                 .WithMany(u => u.ShopUsers)
                 .HasForeignKey(su => su.UserId);
+
+            // Service → Category (many-to-1)
+            builder.Entity<Service>()
+                .HasOne(s => s.Category)
+                .WithMany()
+                .HasForeignKey(s => s.CategoryId);
 
 
         }

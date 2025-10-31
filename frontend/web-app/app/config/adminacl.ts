@@ -14,6 +14,17 @@ export interface SidebarGroup {
 
 export const sidebarGroups: SidebarGroup[] = [
     {
+        title:"Select Shop",
+        items:[
+            {
+                title:"Select Shops",
+                href:"/",
+                icon:Store,
+                permission:"Shops.View",
+            }
+        ],
+    },
+    {
         title: "Management Store",
         items: [
             {
@@ -22,6 +33,12 @@ export const sidebarGroups: SidebarGroup[] = [
                 icon: Store,
                 permission: "Shops.ViewPage",
             },
+            {
+                title:"Categories",
+                href:"/dashboard/categories",
+                icon:ShieldCheck,
+                permission:"Categories.View",
+            }
         ],
     },
     {

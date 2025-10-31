@@ -3,9 +3,8 @@
 import { PermissionButton } from "@/components/permissionButton/PermissionButton";
 import { useToast } from "@/components/ui/use-toast";
 import { Shops } from "@/types/shop";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import LoadingPage from "../loading";
-
 import {
     AlertDialog,
     AlertDialogTrigger,
@@ -19,13 +18,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PageResult } from "@/types/pageResult";
 import AppPagination from "@/components/AppPagination";
-
-import { createShop, deleteShop, updateShop } from "@/app/actions/shopAction";
+import { createShop, deleteShop, getShops, updateShop } from "@/app/actions/shopAction";
 import { Users } from "@/types/user";
 import dynamic from "next/dynamic";
-
 import { DataTable } from "@/components/DataTable";
-// import { ShopFormDialog } from "./ShopFormDialog";
+import { useParamsStore } from "@/hooks/useParamStore";
+import { useShallow } from "zustand/shallow";
 
 const ShopFormDialog = dynamic(() => import("./ShopFormDialog").then(m => m.ShopFormDialog), {
     ssr: false,
@@ -39,112 +37,125 @@ interface ShopsListProps {
 
 export default function ShopsList({ initialShops, initialUser }: ShopsListProps) {
     const [shops, setShops] = useState(initialShops.items);
-    const [pageNumber, setPageNumber] = useState(initialShops.pageNumber ?? 1);
-    const [totalPages, setTotalPages] = useState(initialShops.totalPages ?? 1);
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [editingShop, setEditingShop] = useState<Shops | null>(null);
 
+    // ✅ Zustand pagination store
+    const { pageNumber, pageSize, totalPages, setParams } = useParamsStore(
+        useShallow((state) => ({
+            pageNumber: state.pageNumber,
+            pageSize: state.pageSize,
+            totalPages: state.totalPages,
+            setParams: state.setParams,
+        }))
+    );
+
+    // ✅ Initialize store on mount
+    useEffect(() => {
+        setParams({
+            pageNumber: initialShops.pageNumber,
+            pageSize: initialShops.pageSize,
+            totalPages: initialShops.totalPages,
+        });
+    }, [initialShops, setParams]);
+
+    // ✅ Helper: refresh page after CRUD
+    async function refreshPage(page = pageNumber) {
+        const query = `?page=${page}&pageSize=${pageSize}`;
+        const result = await getShops(query);
+
+        if (!result || result.isSuccess === false) {
+            toast({
+                title: "Error loading shops",
+                description: "Failed to refresh shop list.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setShops(result.items);
+        setParams({
+            pageNumber: result.pageNumber,
+            totalPages: result.totalPages,
+        });
+    }
+
+    // ✅ Pagination
+    async function handlePageChange(newPage: number) {
+        startTransition(() => refreshPage(newPage));
+    }
+
+    // ✅ Create
     async function handleCreate(data: Partial<Shops>) {
         startTransition(async () => {
             const result = await createShop(data);
 
             if (!result.success) {
-                // Validation failed or other error
-                if (result.validationErrors) {
-                    // Pass this to your form dialog to display
-                    toast({
-                        title: "Validation Error",
-                        description: Object.values(result.validationErrors)
-                            .flat()
-                            .join(", "),
-                        variant: "destructive",
-                    });
-                } else {
-                    toast({
-                        title: "Error",
-                        description: result.error || "Failed to create shop",
-                        variant: "destructive",
-                    });
-                }
+                toast({
+                    title: "Error",
+                    description: result.error || "Failed to create shop",
+                    variant: "destructive",
+                });
                 return;
             }
 
-            // ✅ Success
-            setShops((prev) => [...prev, result]);
             toast({
                 title: "✅ Shop Created",
                 description: `${result.name} added successfully.`,
             });
+
+            // 🔁 Refresh pagination (may increase totalPages)
+            await refreshPage();
         });
     }
 
-
+    // ✅ Update
     async function handleUpdate(id: string, data: Partial<Shops>) {
         startTransition(async () => {
-            try {
-                const result = await updateShop(id, { ...data, id });
-                if (result.success) {
-                    toast({
-                        title: "✅ Shop Updated",
-                        description: `${data.name} updated successfully.`,
-                    });
-                    setEditingShop(null);
-                } else {
-                    toast({
-                        title: "Error",
-                        description: result.error || "Failed to update shop",
-                        variant: "destructive",
-                    });
-                    return;
-                }
+            const result = await updateShop(id, { ...data, id });
 
-                setShops((prev) =>
-                    prev.map((shop) => (shop.id === id ? { ...shop, ...data } : shop))
-                );
-            } catch (error) {
-                console.log(error)
-            }
-        });
-    }
-
-    async function handlePageChange(page: number) {
-        startTransition(async () => {
-            try {
-                // ✅ Fetch data directly from API
-                const res = await fetch(`/api/shop?page=${page}&pageSize=10`, {
-                    cache: "no-store",
-                });
-
-                if (!res.ok) throw new Error("Failed to load shops");
-
-                const data: PageResult<Shops> = await res.json();
-                setShops(data.items);
-                setPageNumber(data.pageNumber ?? page);
-                setTotalPages(data.totalPages ?? 1);
-            } catch {
+            if (!result.success) {
                 toast({
-                    title: "Error loading shops",
+                    title: "Error",
+                    description: result.error || "Failed to update shop",
                     variant: "destructive",
                 });
+                return;
             }
+
+            toast({
+                title: "✅ Shop Updated",
+                description: `${result.data.name} updated successfully.`,
+            });
+
+            setEditingShop(null);
+
+            // 🔁 Refresh the current page
+            await refreshPage();
         });
     }
 
+    // ✅ Delete
     async function handleDelete(id: string) {
         startTransition(async () => {
             const result = await deleteShop(id);
             if (result.success) {
-                setShops((prev) => prev.filter((shop) => shop.id !== id));
                 toast({
                     title: "✅ Shop Deleted",
                     description: "Shop deleted successfully.",
                 });
+
+                // ⚙️ If we deleted the last item on the last page, go back one page
+                const isLastItemOnPage = shops.length === 1 && pageNumber > 1;
+                const targetPage = isLastItemOnPage ? pageNumber - 1 : pageNumber;
+
+                await refreshPage(targetPage);
             } else {
                 toast({
                     title: "Failed to Delete Shop",
-                    description: result.error || "An unknown error occurred on delete shop.",
+                    description: result.error || "An unknown error occurred.",
                     variant: "destructive",
                 });
             }
@@ -166,7 +177,6 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
 
             {isPending && <LoadingPage />}
 
-            {/* DataTable */}
             <DataTable
                 data={shops}
                 columns={[
@@ -183,18 +193,15 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
                         key: "asignedUsers",
                         label: "Asigned Users",
                         render: (shop) => (
-                            <>
-                                <PermissionButton
-                                    size="sm"
-                                    // variant="outline"
-                                    permission="Shops.View"
-                                    className="bg-blue-800 text-white hover:bg-blue-900 hover:text-white"
-                                    href={`/dashboard/shops/${shop.id}`}
-                                >
-                                    Asign Users
-                                </PermissionButton>
-                            </>
-                        )
+                            <PermissionButton
+                                size="sm"
+                                permission="Shops.View"
+                                className="bg-blue-800 text-white hover:bg-blue-900 hover:text-white"
+                                href={`/dashboard/shops/${shop.id}`}
+                            >
+                                Asign Users
+                            </PermissionButton>
+                        ),
                     },
                     {
                         key: "actions",
@@ -248,6 +255,7 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
                     },
                 ]}
             />
+
             <ShopFormDialog
                 open={open}
                 setOpen={setOpen}
@@ -258,7 +266,7 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
                 users={initialUser}
             />
 
-            {/* ✅ ShadCN Pagination */}
+            {/* ✅ Pagination */}
             <div className="flex justify-end pt-4">
                 <AppPagination
                     currentPage={pageNumber}

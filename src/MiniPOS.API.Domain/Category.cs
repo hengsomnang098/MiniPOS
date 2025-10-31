@@ -7,5 +7,7 @@ namespace MiniPOS.API.Domain
         public Guid ShopId { get; set; }
         public Shop Shop { get; set; }
 
+        public ICollection<Service> Services { get; set; } = new List<Service>();
+
     }
 }

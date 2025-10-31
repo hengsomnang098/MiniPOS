@@ -1,6 +1,7 @@
 using AutoMapper;
 using MiniPOS.API.Application.DTOs.Category;
 using MiniPOS.API.Application.DTOs.Role;
+using MiniPOS.API.Application.DTOs.Service;
 using MiniPOS.API.Application.DTOs.Shop;
 using MiniPOS.API.Application.DTOs.ShopUser;
 using MiniPOS.API.Application.DTOs.User;
@@ -12,17 +13,40 @@ namespace MiniPOS.API.Application
     {
         public MappingProfiles()
         {
-            // 🧭 Category Mappings
-            CreateMap<CreateCategoryDto, Category>();
-            CreateMap<UpdateCategoryDto, Category>();
+            // 🏷️ Category Mappings
+            CreateMap<Category, GetCategoryDto>()
+                .ForMember(dest => dest.ShopId, opt => opt.MapFrom(src => src.ShopId))
+                .ForMember(dest => dest.Shop, opt => opt.MapFrom(src => src.Shop != null ? src.Shop.Name : string.Empty));
+
+            CreateMap<CreateCategoryDto, Category>()
+                .ForMember(dest => dest.ShopId, opt => opt.MapFrom(src => src.ShopId))
+                .ForMember(dest => dest.Id, opt => opt.Ignore()); // ensure EF creates the PK
+
+            CreateMap<UpdateCategoryDto, Category>()
+                .ForMember(dest => dest.ShopId, opt => opt.MapFrom(src => src.ShopId))
+                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+
+            // Service Mappings
+            CreateMap<Service, GetServiceDto>()
+                .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId))
+                .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category != null ? src.Category.CategoryName : string.Empty));
+
+            CreateMap<CreateServiceDto, Service>()
+                .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId))
+                .ForMember(dest => dest.Id, opt => opt.Ignore()); // ensure EF creates the
+
+            CreateMap<UpdateServiceDto, Service>()
+                .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId))
+                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
+                
 
             // 👥 ShopUser Mappings
             CreateMap<ShopUser, ShopUserDto>()
-      .ForMember(dest => dest.Shop, opt => opt.MapFrom(src => src.Shop.Name))
-      .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User.FullName));
+                .ForMember(dest => dest.Shop, opt => opt.MapFrom(src => src.Shop != null ? src.Shop.Name : string.Empty))
+                .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User != null ? src.User.FullName : string.Empty));
 
             CreateMap<ShopUserCreateDto, ShopUser>()
-                .ForMember(dest => dest.UserId, opt => opt.Ignore()) // since ShopUserCreateDto.UserId[] is multiple
+                .ForMember(dest => dest.UserId, opt => opt.Ignore()) // ShopUserCreateDto.UserId[] is multiple
                 .ForMember(dest => dest.ShopId, opt => opt.MapFrom(src => src.ShopId));
 
             // 🏪 Shop Mappings
@@ -33,8 +57,9 @@ namespace MiniPOS.API.Application
             CreateMap<CreateShopDto, Shop>();
 
             CreateMap<UpdateShopDto, Shop>()
-                .ForMember(dest => dest.Id, opt => opt.Ignore()) // prevent ID overwrite
-                .ForMember(dest => dest.UserId, opt => opt.Ignore()); // user is set elsewhere (e.g., from auth context)
+                .ForMember(dest => dest.Id, opt => opt.Ignore()) // prevent PK overwrite
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore()) // never touch CreatedAt
+                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
             // 👤 User Mappings
             CreateMap<CreateUserDto, ApplicationUser>();

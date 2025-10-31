@@ -1,4 +1,3 @@
-// components/AppPagination.tsx
 "use client";
 
 import {
@@ -26,28 +25,46 @@ export default function AppPagination({
   return (
     <Pagination className="mt-4 justify-end">
       <PaginationContent>
+        {/* ◀️ Previous */}
         <PaginationItem>
           <PaginationPrevious
             onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
-            className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+            className={currentPage === 1 ? " cursor-pointer opacity-50" : ""}
           />
         </PaginationItem>
 
-        {Array.from({ length: totalPages }).map((_, i) => (
-          <PaginationItem key={i}>
-            <PaginationLink
-              isActive={i + 1 === currentPage}
-              onClick={() => onPageChange(i + 1)}
-            >
-              {i + 1}
-            </PaginationLink>
-          </PaginationItem>
-        ))}
+        {/* 🔢 Page numbers */}
+        {Array.from({ length: totalPages }).map((_, i) => {
+          const page = i + 1;
+          const isActive = page === currentPage;
 
+          return (
+            <PaginationItem key={i}>
+              <PaginationLink
+                onClick={() => onPageChange(page)}
+                className={`cursor-pointer transition-colors ${
+                  isActive
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "hover:bg-muted"
+                }`}
+              >
+                {page}
+              </PaginationLink>
+            </PaginationItem>
+          );
+        })}
+
+        {/* ▶️ Next */}
         <PaginationItem>
           <PaginationNext
-            onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
-            className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+            onClick={() =>
+              currentPage < totalPages && onPageChange(currentPage + 1)
+            }
+            className={
+              currentPage === totalPages
+                ? "cursor-pointer opacity-50"
+                : ""
+            }
           />
         </PaginationItem>
       </PaginationContent>

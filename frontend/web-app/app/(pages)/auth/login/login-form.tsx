@@ -38,7 +38,7 @@ export default function LoginForm() {
 
     const { toast } = useToast();
     const params = useSearchParams();
-    const alert = params.get("alert");
+    const alert = params.get("alert");  
 
     const {
         register,
@@ -65,7 +65,7 @@ export default function LoginForm() {
             return;
         }
 
-        router.push('/dashboard');
+        router.push('/');
     };
 
     useEffect(() => {

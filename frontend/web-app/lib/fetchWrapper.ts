@@ -162,4 +162,5 @@ export const FetchWrapper = {
     post: (url: string, body?: any) => request("POST", url, body),
     put: (url: string, body?: any) => request("PUT", url, body),
     del: (url: string) => request("DELETE", url),
+    path: (url: string, body?: any) => request("PATCH", url, body),
 };

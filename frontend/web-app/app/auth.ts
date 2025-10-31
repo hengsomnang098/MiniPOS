@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import type { User as NextAuthUser } from "next-auth";
+import { cookies } from "next/headers";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -41,8 +42,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
+        const cookieStore = cookies();
+        (await cookieStore).delete("activeShopId");
         const u = user as NextAuthUser & {
           accessToken: string;
           refreshToken: string;
@@ -75,6 +78,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           refreshToken: string;
           expiresIn: string;
         };
+      }
+
+      // ✅ When updating session (e.g., user selects a shop)
+      if (trigger === "update" && session?.shopId) {
+        token.shopId = session.shopId;
       }
 
       return token;

@@ -9,6 +9,6 @@ namespace MiniPOS.API.Application.DTOs.Category
         public string CategoryName { get; set; }
 
         [Required]
-        public Guid StoreId { get; set; }
+        public Guid ShopId { get; set; }
     }
 }

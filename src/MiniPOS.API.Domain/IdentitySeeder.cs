@@ -55,8 +55,10 @@ namespace MiniPOS.API.Domain
             {
                 // Categories
                 "Categories.View", "Categories.Create", "Categories.Update", "Categories.Delete",
-                // Stores
-                "Stores.View", "Stores.Create", "Stores.Update", "Stores.Delete",
+
+                // Services
+                "Services.View", "Services.Create", "Services.Update", "Services.Delete",
+
                 // Users
                 "Users.View", "Users.Create", "Users.Update", "Users.Delete",
                 // Add more permissions here as needed
@@ -105,8 +107,8 @@ namespace MiniPOS.API.Domain
 
             // Staff gets view access for Stores and Categories
             var staffPermissionIds = allPermissions
-    .Where(p => p.Name.EndsWith(".View", StringComparison.OrdinalIgnoreCase))
-    .Select(p => p.Id);
+                .Where(p => p.Name == "Categories.View" || p.Name == "Services.View" || p.Name == "Shops.View")
+                .Select(p => p.Id);
 
             await AddMissingRolePermissionsAsync(staffRole.Id, staffPermissionIds);
 

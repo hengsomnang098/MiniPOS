@@ -1,46 +1,33 @@
 import { create } from "zustand";
 
 type State = {
-    pageNumber: number;
-    pageSize: number;
-    pageCount: number;
-    // searchTerm: string;
-    // orderBy: string;   
-    // filterBy: string;
-    // seller?:string;
-    // winner?:string;
-
-}
+  pageNumber: number;
+  pageSize: number;
+  pageCount: number;
+  totalPages: number;
+};
 
 type Actions = {
-    setParams: (params: Partial<State>) => void;
-    reset: () => void;
-}
+  setParams: (params: Partial<State>) => void;
+  reset: () => void;
+};
 
 const initialState: State = {
-    pageNumber: 1,
-    pageSize: 10,
-    pageCount: 1,
-    // searchTerm: '',
-    // orderBy: 'make',
-    // filterBy: 'live',
-    // seller: undefined,
-    // winner: undefined,
-  
-}
+  pageNumber: 1,
+  pageSize: 10,
+  pageCount: 0,
+  totalPages: 0,
+};
 
 export const useParamsStore = create<State & Actions>((set) => ({
-    ...initialState,
+  ...initialState,
 
-    setParams: (newParams: Partial<State>) => {
-        set((state) => {
-            if (newParams.pageNumber) {
-                return {...state, pageNumber: newParams.pageNumber}
-            } else {
-                return {...state, ...newParams, pageNumber: 1}
-            }
-        })
-    },
+  setParams: (params: Partial<State>) => {
+    set((state) => ({
+      ...state,
+      ...params, // ✅ Merge everything that’s passed in
+    }));
+  },
 
-    reset: () => set(initialState)
-}))
+  reset: () => set(initialState),
+}));

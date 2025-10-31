@@ -1,13 +1,8 @@
 "use client"
-
-import { Roles } from "@/types/role"
-import { Permissions } from "@/types/permission"
-import { useState, useTransition } from "react"
-import { useToast } from "@/components/ui/use-toast"
-import { createRole, deleteRole, updateRole } from "@/app/actions/roleActions"
 import { PermissionButton } from "@/components/permissionButton/PermissionButton"
 import LoadingPage from "../loading"
-
+import { useState, useTransition } from "react"
+import { useToast } from "@/components/ui/use-toast"
 import {
     AlertDialog,
     AlertDialogTrigger,
@@ -20,91 +15,82 @@ import {
     AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { DataTable } from "@/components/DataTable"
-import dynamic from "next/dynamic"
-// import RoleFormDialog from "./RoleFormDialog"
+import { Categories } from "@/types/category"
+import { createCategory, deleteCategory, updateCategory } from "@/app/actions/categoryAction"
+import CategoriesFormDialog from "./CategoriesFormDialog"
 
-const RoleFormDialog = dynamic(() => import("./RoleFormDialog").then(m => m.default), {
-    ssr: false,
-    loading: () => <LoadingPage />
-})
-
-
-interface RolesClientProps {
-    initialRoles: Roles[]
-    initialPermissions: Permissions[]
+interface CategoriesListProps {
+    initialCategories: Categories[]
+    shopId: string
 }
 
-export function RolesList({
-    initialRoles,
-    initialPermissions }:
-    RolesClientProps) {
+export default function CategoriesList({
+    initialCategories, shopId }: CategoriesListProps) {
 
-    const [roles, setRoles] = useState(initialRoles);
+    const [categories, setCategories] = useState(initialCategories);
     const [open, setOpen] = useState(false);
-    const [editingRole, setEditingRole] = useState<Roles | null>(null);
+    const [editingCategory, setEditingCategory] = useState<Categories | null>(null);
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
 
-    async function handleCreate(data: Partial<Roles>) {
+    async function handleCreate(data: Partial<Categories>) {
+        data.shopId = shopId;
+        const result = await createCategory(data);
         startTransition(async () => {
-            const result = await createRole(data);
 
             if (result && !('error' in result)) {
-                setRoles((prev) => [...prev, result]);
+                setCategories((prev) => [...prev, result]);
                 toast({
-                    title: "✅ Role Created",
-                    description: `${result.name} added successfully.`,
+                    title: "✅ Category Created",
+                    description: `${result.categoryName} added successfully.`,
                 });
             } else {
                 toast({
-                    title: "Failed to Create Role",
-                    description: (result && 'error' in result && result.error) || "An unknown error occurred.",
-                    variant: "destructive",
+                    title: "Failed to Create Category",
+                    description: result.error || "An unexpected error occurred.",
                 });
             }
         })
     }
 
-    async function handleUpdate(id: string, data: Partial<Roles>) {
+    async function handleUpdate(id: string, data: Partial<Categories>) {
+        data.shopId = shopId;
+        const result = await updateCategory(id, {...data,id});
         startTransition(async () => {
-            const result = await updateRole(id, data);
 
             if (result && !('error' in result)) {
-                setRoles((prev) =>
-                    prev.map((role) => (role.id === id ? result : role))
+                setCategories((prev) =>
+                    prev.map((cat) => (cat.id === id ? result : cat))
                 );
                 toast({
-                    title: "✅ Role Updated",
-                    description: `${result.name} updated successfully.`,
+                    title: "✅ Category Updated",
+                    description: `${result.categoryName} updated successfully.`,
                 });
             } else {
                 toast({
-                    title: "Failed to Update Role",
-                    description: (result && 'error' in result && result.error) || "An unknown error occurred.",
-                    variant: "destructive",
+                    title: "Failed to Update Category",
+                    description: result.error || "An unexpected error occurred.",
                 });
             }
-        });
+        })
     }
 
     async function handleDelete(id: string) {
+        const result = await deleteCategory(id);
         startTransition(async () => {
-            const result = await deleteRole(id);
-
-            if (result.success) {
-                setRoles((prev) => prev.filter((role) => role.id !== id));
+            if (result && result.success) {
+                setCategories((prev) => prev.filter((cat) => cat.id !== id));
                 toast({
-                    title: "✅ Role Deleted",
-                    description: "Role deleted successfully.",
+                    title: "✅ Category Deleted",
+                    description: `Category deleted successfully.`,
                 });
             } else {
                 toast({
-                    title: "Failed to Delete Role",
-                    description: result.error || "An unknown error occurred.",
-                    variant: "destructive",
+                    title: "Failed to Delete Category",
+                    description: result.message || "An unexpected error occurred.",
                 });
             }
-        });
+        })
     }
 
 
@@ -112,32 +98,31 @@ export function RolesList({
         <div className="space-y-4">
             {/* Header */}
             <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium">All Roles & Permissions</h2>
+                <h2 className="text-lg font-medium">All Categories</h2>
                 <PermissionButton
-                    permission="Roles.Create"
+                    permission="Categories.Create"
                     className="bg-cyan-500"
                     onClick={() => {
-                        setEditingRole(null);
+                        setEditingCategory(null);
                         setOpen(true);
                     }}
                 >
-                    + Add Role
+                    + Add Category
                 </PermissionButton>
             </div>
 
             {isPending && <LoadingPage />}
 
-            {/* DataTable */}
             <DataTable
-                data={roles}
+                data={categories}
                 columns={[
-                    { key: "name", label: "Role Name" },
-                    { key: "description", label: "Description" },
+                    { key: "categoryName", label: "Category Name", },
+                    { key: "shop", label: "Shop Name ", },
                     {
                         key: "actions",
                         label: "Actions",
                         className: "text-right",
-                        render: (role) => (
+                        render: (category) => (
                             <div className="space-x-2 text-right">
                                 <PermissionButton
                                     size="sm"
@@ -145,7 +130,7 @@ export function RolesList({
                                     permission="Roles.Update"
                                     className="bg-yellow-500 hover:bg-yellow-300"
                                     onClick={() => {
-                                        setEditingRole(role as Roles);
+                                        setEditingCategory(category);
                                         setOpen(true);
                                     }}
                                 >
@@ -166,13 +151,13 @@ export function RolesList({
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                Permanently remove <strong>{(role as Roles).name}</strong>?
+                                                Permanently remove <strong>{(category).categoryName}</strong>?
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                                             <AlertDialogAction
-                                                onClick={() => handleDelete((role as Roles).id)}
+                                                onClick={() => handleDelete(category.id)}
                                                 className="bg-destructive text-white hover:bg-destructive/90"
                                             >
                                                 Delete
@@ -186,15 +171,17 @@ export function RolesList({
                 ]}
             />
 
-            {/* Create/Edit Dialog */}
-            <RoleFormDialog
+            <CategoriesFormDialog
                 open={open}
                 setOpen={setOpen}
-                onSubmit={
-                    editingRole ? (data) => handleUpdate(editingRole.id, data) : handleCreate
-                }
-                permissions={initialPermissions}
-                role={editingRole}
+                category={editingCategory}
+                onSubmit={async (data: Partial<Categories>) => {
+                    if (editingCategory) {
+                        await handleUpdate(editingCategory.id, data);
+                    } else {
+                        await handleCreate(data);
+                    }
+                }}
             />
         </div>
     )

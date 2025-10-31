@@ -10,12 +10,12 @@ namespace MiniPOS.API.Authorization
             public const string Delete = "Categories.Delete";
         }
 
-        public static class Stores
+        public static class Services
         {
-            public const string View = "Stores.View";
-            public const string Create = "Stores.Create";
-            public const string Update = "Stores.Update";
-            public const string Delete = "Stores.Delete";
+            public const string View = "Services.View";
+            public const string Create = "Services.Create";
+            public const string Update = "Services.Update";
+            public const string Delete = "Services.Delete";
         }
 
         public static class Users
@@ -53,10 +53,10 @@ namespace MiniPOS.API.Authorization
                 Categories.Update,
                 Categories.Delete,
 
-                Stores.View,
-                Stores.Create,
-                Stores.Update,
-                Stores.Delete,
+                Services.View,
+                Services.Create,
+                Services.Update,
+                Services.Delete,
 
                 Users.View,
                 Users.Create,
@@ -72,7 +72,7 @@ namespace MiniPOS.API.Authorization
                 Shops.Create,
                 Shops.Update,
                 Shops.Delete,
-                Shops.ViewPage  
+                Shops.ViewPage
             };
         }
     }

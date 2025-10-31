@@ -8,6 +8,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Identity;
 
 namespace MiniPOS.API.Application.Services
 {
@@ -20,13 +21,15 @@ namespace MiniPOS.API.Application.Services
 
         private const string RolesCacheKey = "all_roles";
         private const string PermissionsCacheKey = "all_permissions";
+        private readonly RoleManager<ApplicationRole> _roleManager;
 
-        public RoleRepository(ApplicationDbContext context, IMapper mapper, IMemoryCache cache, ILogger<RoleRepository> logger)
+        public RoleRepository(ApplicationDbContext context, IMapper mapper, IMemoryCache cache, ILogger<RoleRepository> logger, RoleManager<ApplicationRole> roleManager)
         {
             _context = context;
             _mapper = mapper;
             _cache = cache;
             _logger = logger;
+            _roleManager = roleManager;
         }
 
         // ✅ Get all roles (cached)
@@ -104,6 +107,7 @@ namespace MiniPOS.API.Application.Services
                 {
                     RoleId = role.Id,
                     PermissionId = pid
+
                 }).ToList();
 
                 await _context.RolePermissions.AddRangeAsync(rolePermissions);
@@ -134,13 +138,12 @@ namespace MiniPOS.API.Application.Services
         {
             try
             {
-                var role = await _context.Roles
-                .Include(r => r.RolePermissions)
-                .FirstOrDefaultAsync(r => r.Id == id);
-
+                // ✅ Fetch role via RoleManager to ensure it's tracked by Identity
+                var role = await _roleManager.FindByIdAsync(id.ToString());
                 if (role == null)
                     return Result<GetRoleDto>.Failure(new Error(ErrorCodes.NotFound, "Role not found"));
 
+                // ✅ Validate permissions
                 var permissions = await _context.Permissions
                     .Where(p => updateDto.PermissionIds.Contains(p.Id))
                     .ToListAsync();
@@ -148,9 +151,24 @@ namespace MiniPOS.API.Application.Services
                 if (permissions.Count != updateDto.PermissionIds.Count())
                     return Result<GetRoleDto>.Failure(new Error(ErrorCodes.BadRequest, "One or more permission IDs are invalid"));
 
-                _mapper.Map(updateDto, role);
+                // ✅ Update fields
+                role.Name = updateDto.Name;
+                role.Description = updateDto.Description;
+                role.NormalizedName = updateDto.Name.ToUpper();
 
-                _context.RolePermissions.RemoveRange(role.RolePermissions);
+                // ✅ Update using RoleManager (important for Identity)
+                var identityResult = await _roleManager.UpdateAsync(role);
+                if (!identityResult.Succeeded)
+                {
+                    var errorMsg = string.Join(", ", identityResult.Errors.Select(e => e.Description));
+                    _logger.LogWarning("Role update failed via RoleManager: {Errors}", errorMsg);
+                    return Result<GetRoleDto>.Failure(new Error(ErrorCodes.Failure, errorMsg));
+                }
+
+                // ✅ Sync RolePermissions (EF directly)
+                var existingPermissions = _context.RolePermissions.Where(rp => rp.RoleId == id);
+                _context.RolePermissions.RemoveRange(existingPermissions);
+
                 var newPermissions = updateDto.PermissionIds.Select(pid => new RolePermission
                 {
                     RoleId = role.Id,
@@ -158,21 +176,22 @@ namespace MiniPOS.API.Application.Services
                 }).ToList();
 
                 await _context.RolePermissions.AddRangeAsync(newPermissions);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();  
 
                 // ✅ Invalidate cache
                 _cache.Remove(RolesCacheKey);
                 _logger.LogInformation("CACHE INVALIDATE: Roles cache cleared after role update");
 
+                // ✅ Fetch updated role with permissions
                 var updatedRole = await _context.Roles
                     .Include(r => r.RolePermissions)
                     .ThenInclude(rp => rp.Permission)
-                    .FirstOrDefaultAsync(r => r.Id == role.Id);
+                    .FirstOrDefaultAsync(r => r.Id == id);
 
                 var result = _mapper.Map<GetRoleDto>(updatedRole);
                 return Result<GetRoleDto>.Success(result);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while updating role {RoleId}.", id);
                 return Result<GetRoleDto>.Failure(new Error(ErrorCodes.Failure, "An unexpected error occurred while updating the role."));

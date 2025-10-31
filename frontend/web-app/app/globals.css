@@ -117,7 +117,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground overflow-hidden;
+    @apply bg-background text-foreground;
   }
   .bg-main-color {
     @apply bg-linear-to-b from-[#0070cc] via-[#004d99] to-[#0066cc];

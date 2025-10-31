@@ -25,11 +25,12 @@ namespace MiniPOS.API.Application.Services
         {
             var shop = await _context.Shops
                 .Include(s => s.ShopUsers)
-                    .ThenInclude(su => su.User)
+                .ThenInclude(su => su.User)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == shopId);
 
             if (shop == null)
-                return Result<IEnumerable<ShopUserDto>>.BadRequest(new Error(ErrorCodes.BadRequest, "Shop not found."));
+                return Result<IEnumerable<ShopUserDto>>.NotFound();
 
             var shopUsers = shop.ShopUsers;
             var mapped = _mapper.Map<IEnumerable<ShopUserDto>>(shopUsers);
@@ -41,7 +42,8 @@ namespace MiniPOS.API.Application.Services
         {
             var user = await _context.Users
                 .Include(u => u.ShopUsers)
-                    .ThenInclude(su => su.Shop)
+                .ThenInclude(su => su.Shop)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)

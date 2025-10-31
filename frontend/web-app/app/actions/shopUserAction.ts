@@ -13,6 +13,15 @@ export async function getShopUsers(shopId: string) {
     }
 }
 
+export async function getShopByUser(userId: string) {
+    try{
+        return await FetchWrapper.get(`${baseUrl}/user/${userId}`);
+    } catch (error) {
+        console.error("Get shop by user error:", error);
+        return { isSuccess: false, data: null, message: "Failed to load shop for user." };
+    }
+}
+
 export async function assignUsersToShop(
     shopId: string,
     userIds: string[]
