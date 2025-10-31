@@ -6,7 +6,7 @@ import React from 'react'
 import CategoriesList from './CategoriesList';
 
 export default async function page() {
-    const shopId = (await cookies()).get("activeShopId")?.value;
+    const shopId  = (await cookies()).get("activeShopId")?.value;
     if (!shopId) {
         return redirect('/');
     }
