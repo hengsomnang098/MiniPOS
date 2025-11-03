@@ -1,7 +1,7 @@
+using MiniPOS.API.Application.Config;
 using MiniPOS.API.Configuration;
 using MiniPOS.API.Domain;
 using Serilog;
-using System.IO;
 
 // ✅ Ensure working directory is consistent across environments (esp. EF & Linux)
 Directory.SetCurrentDirectory(AppContext.BaseDirectory);
@@ -22,13 +22,18 @@ try
     // ✅ Load full Serilog config (from appsettings.json)
     builder.Host.AddSerilogConfiguration();
 
+    // BunnyCDN Configuration
+    builder.Services.Configure<BunnyCdnOptions>(builder.Configuration.GetSection("BunnyCdn"));
+
     // ✅ Register core services
     builder.Services
         .AddDatabaseConfiguration(builder.Configuration)
         .AddAuthenticationConfiguration(builder.Configuration)
-        .AddApplicationServices()
+        .AddApplicationServices(builder.Configuration) // 👈 pass configuration here
         .AddRateLimitingConfiguration()
         .AddSwaggerConfiguration();
+
+
 
     // ✅ Authorization config (clean separation)
     AuthorizationConfiguration.AddAuthorizationConfiguration(builder.Services);

@@ -85,6 +85,14 @@ export async function updateShop(id: string, data: Partial<Shops>) {
         };
     } catch (error: any) {
         console.error("Update shop error:", error);
+        if (error.code === "ValidationError") {
+            return {
+                success: false,
+                validationErrors: error.validationErrors,
+                error: error.message,
+            };
+        }
+
         return {
             success: false,
             error: error?.message || "An unexpected error occurred.",
@@ -94,12 +102,24 @@ export async function updateShop(id: string, data: Partial<Shops>) {
 
 
 
-export async function deleteShop(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteShop(id: string): Promise<any> {
     try {
         await await fetchWrapper.del(`${baseUrl}/${id}`);
         return { success: true };
     } catch (error: any) {
-        console.error("Delete shop error:", error);
-        return { success: false, error: error?.message || "An unexpected error occurred." };
+        console.error("Create shop error:", error);
+
+        if (error.code === "ValidationError") {
+            return {
+                success: false,
+                validationErrors: error.validationErrors,
+                error: error.message,
+            };
+        }
+
+        return {
+            success: false,
+            error: error?.message || "An unexpected error occurred.",
+        };
     }
 }

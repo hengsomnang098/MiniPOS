@@ -42,15 +42,15 @@ export function DataTable<T extends { id?: string | number }>({
             )}
         >
             <div className="overflow-x-auto max-h-[70vh]">
-                <Table>
-                    {/* 🔹 Neon Blue Header */}
+                <Table className="hidden md:table w-full">
+                    {/* 🔹 Desktop Header */}
                     <TableHeader className="sticky top-0 z-10 bg-linear-to-r from-[#00b7ff] via-[#0077ff] to-[#00b7ff] text-white shadow-[0_0_15px_rgba(0,183,255,0.6)]">
                         <TableRow>
                             {columns.map((col) => (
                                 <TableHead
                                     key={col.key as string}
                                     className={cn(
-                                        "text-sm font-semibold uppercase tracking-wide py-3 border-b border-blue-400/40 text-whi",
+                                        "text-sm font-semibold uppercase tracking-wide py-3 border-b border-blue-400/40",
                                         col.align === "center"
                                             ? "text-center"
                                             : col.align === "right"
@@ -67,6 +67,7 @@ export function DataTable<T extends { id?: string | number }>({
                         </TableRow>
                     </TableHeader>
 
+                    {/* 🔹 Desktop Body */}
                     <TableBody>
                         {data.length > 0 ? (
                             data.map((item, i) => (
@@ -112,6 +113,41 @@ export function DataTable<T extends { id?: string | number }>({
                         )}
                     </TableBody>
                 </Table>
+
+                {/* 🔹 Mobile Responsive Cards */}
+                <div className="block md:hidden divide-y divide-border">
+                    {data.length > 0 ? (
+                        data.map((item, i) => (
+                            <motion.div
+                                key={String(item[keyField] ?? Math.random())}
+                                className={cn(
+                                    "p-4 bg-background rounded-xl shadow-sm mb-3 border border-border hover:shadow-lg transition-all",
+                                    i % 2 === 0 ? "bg-background" : "bg-muted/10"
+                                )}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.03 }}
+                            >
+                                {columns.map((col) => (
+                                    <div key={col.key as string} className="flex justify-between py-1">
+                                        <div className="font-semibold text-sm text-muted-foreground">
+                                            {col.label}
+                                        </div>
+                                        <div className="text-sm text-foreground text-right">
+                                            {col.render
+                                                ? col.render(item)
+                                                : (item[col.key as keyof T] as any)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </motion.div>
+                        ))
+                    ) : (
+                        <div className="text-center text-muted-foreground py-8">
+                            {emptyMessage}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

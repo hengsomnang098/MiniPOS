@@ -20,7 +20,7 @@ namespace MiniPOS.API.Controllers
         private readonly IShopRepository _shopRepository;
         private readonly ILogger<ShopController> _logger;
 
-        public ShopController(IShopRepository shopRepository,ILogger<ShopController> logger) 
+        public ShopController(IShopRepository shopRepository, ILogger<ShopController> logger)
         {
             _shopRepository = shopRepository;
             _logger = logger;
@@ -30,20 +30,11 @@ namespace MiniPOS.API.Controllers
         [HasPermission(Shops.View)]
         public async Task<ActionResult<PaginatedResult<GetShopDto>>> GetShops(
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string search = null
+            )
         {
-            var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            _logger.LogInformation($"Fetching shops for user: {userIdValue}");
-
-            if (string.IsNullOrWhiteSpace(userIdValue))
-                return Unauthorized("User ID claim is missing.");
-
-            // safely convert string to Guid
-            if (!Guid.TryParse(userIdValue, out var userId))
-                return Unauthorized("Invalid user ID format.");
-            var isSuperAdmin = User.IsInRole("Super Admin");
-
-            var result = await _shopRepository.GetAllAsync(page, pageSize, userId, isSuperAdmin);
+            var result = await _shopRepository.GetAllAsync(page, pageSize, search);
             return Ok(result);
         }
 

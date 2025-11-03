@@ -23,6 +23,7 @@ interface FormSelectProps {
     onChange: (value: string) => void;
     error?: FieldError;
     placeholder: string;
+    disabled?: boolean;
 }
 
 export function FormSelect({
@@ -33,11 +34,12 @@ export function FormSelect({
     onChange,
     error,
     placeholder,
+    disabled,
 }: FormSelectProps) {
     return (
         <div className="space-y-2 w-full">
             <Label htmlFor={id}>{label}</Label>
-            <Select value={value} onValueChange={onChange}>
+            <Select value={value} onValueChange={onChange} disabled={disabled}>
                 <SelectTrigger id={id} className="w-full">
                     <SelectValue placeholder={placeholder} />
                 </SelectTrigger>

@@ -1,7 +1,7 @@
 
-import { getShopUsers } from "@/app/actions/shopUserAction";
-import { getUsers } from "@/app/actions/userAction";
+import { getAllUsers } from "@/app/actions/userAction";
 import ShopUsersList from "./ShopUsersList";
+import { getShopUser } from "@/app/actions/shopUserAction";
 
 
 
@@ -11,9 +11,10 @@ interface ShopDetailPageProps {
 export const dynamic = "force-dynamic";
 
 export default async function ShopDetailPage({ params }: ShopDetailPageProps) {
+  const query = "?page=1&pageSize=10";
   const { id } = await params;
-  const shopuers = await getShopUsers(id);
-  const usersResult = await getUsers();
+  const shopuers = await getShopUser(query, id);
+  const usersResult = await getAllUsers();
   const users = Array.isArray(usersResult) ? usersResult : [];
   return (
     <>

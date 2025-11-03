@@ -1,7 +1,6 @@
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.Category;
@@ -15,46 +14,40 @@ namespace MiniPOS.API.Application.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
-        private readonly IMemoryCache _cache;
         private readonly ILogger<CategoryRepository> _logger;
 
-        // Cache settings
-        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
 
         public CategoryRepository(
             ApplicationDbContext context,
             IMapper mapper,
-            IMemoryCache cache,
             ILogger<CategoryRepository> logger)
         {
             _context = context;
             _mapper = mapper;
-            _cache = cache;
             _logger = logger;
         }
 
-        private static string GetCacheKeyForStore(Guid storeId) => $"categories_store_{storeId}";
-        private static string GetCacheKeyForCategory(Guid id) => $"category_{id}";
 
         public async Task<Result<GetCategoryDto>> CreateAsync(CreateCategoryDto request)
         {
             try
             {
-                _logger.LogInformation("Creating new category {CategoryName} for shop {ShopId}", request.CategoryName, request.ShopId);
                 var category = _mapper.Map<Category>(request);
+
+                if (category == null)
+                {
+                    _logger.LogError("Mapping CreateCategoryDto to Category resulted in null");
+                    return Result<GetCategoryDto>.Failure(new Error(ErrorCodes.Validation, "Invalid category data."));
+                }
+                
                 await _context.Categories.AddAsync(category);
                 await _context.SaveChangesAsync();
-
-                // ✅ Clear cache for this store
-                _cache.Remove(GetCacheKeyForStore(category.ShopId));
 
                 // Reload entity with projection
                 var categoryWithShop = await _context.Categories
                     .Where(c => c.Id == category.Id)
                     .ProjectTo<GetCategoryDto>(_mapper.ConfigurationProvider)
                     .FirstAsync();
-
-                _cache.Set(GetCacheKeyForCategory(category.Id), categoryWithShop, CacheDuration);
 
                 return Result<GetCategoryDto>.Success(categoryWithShop);
             }
@@ -65,39 +58,50 @@ namespace MiniPOS.API.Application.Services
             }
         }
 
-        public async Task<Result<List<GetCategoryDto>>> GetAllAsync(Guid storeId)
+        public async Task<PaginatedResult<GetCategoryDto>> GetAllAsync(Guid shopId, int page, int pageSize, string search = null)
         {
-            var cacheKey = GetCacheKeyForStore(storeId);
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            if (_cache.TryGetValue(cacheKey, out List<GetCategoryDto> cachedCategories))
+            var query = _context.Categories
+            .Where(s => s.ShopId == shopId)
+            .AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                _logger.LogDebug("✅ Categories for store {StoreId} loaded from cache", storeId);
-                return Result<List<GetCategoryDto>>.Success(cachedCategories);
+                query = query.Where(c => c.CategoryName.ToLower().Contains(search));
             }
 
-            var categories = await _context.Categories
-                .Where(c => c.ShopId == storeId)
+            var total = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(total / (double)pageSize);
+
+            var categories = await query
+                .Where(s => s.ShopId == shopId)
+                .OrderBy(s => s.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .AsNoTracking()
                 .ProjectTo<GetCategoryDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();
+            if (categories == null) return PaginatedResult<GetCategoryDto>.Success( items: categories,
+                pageCount: total,
+                pageNumber: page,
+                pageSize: pageSize,
+                totalPages: totalPages);
 
-            _cache.Set(cacheKey, categories, CacheDuration);
+            var result = PaginatedResult<GetCategoryDto>.Success(
+                items: categories,
+                pageCount: total,
+                pageNumber: page,
+                pageSize: pageSize,
+                totalPages: totalPages
+            );
 
-            _logger.LogDebug("🆕 Categories for store {StoreId} loaded from DB and cached", storeId);
-
-            return Result<List<GetCategoryDto>>.Success(categories);
+            return result;
         }
 
         public async Task<Result<GetCategoryDto>> GetByIdAsync(Guid id)
         {
-            var cacheKey = GetCacheKeyForCategory(id);
-
-            if (_cache.TryGetValue(cacheKey, out GetCategoryDto cachedCategory))
-            {
-                _logger.LogDebug("✅ Category {CategoryId} loaded from cache", id);
-                return Result<GetCategoryDto>.Success(cachedCategory);
-            }
-
             var category = await _context.Categories
                 .Where(c => c.Id == id)
                 .AsNoTracking()
@@ -107,7 +111,6 @@ namespace MiniPOS.API.Application.Services
             if (category == null)
                 return Result<GetCategoryDto>.Failure(new Error(ErrorCodes.NotFound, "Category not found."));
 
-            _cache.Set(cacheKey, category, CacheDuration);
 
             _logger.LogDebug("🆕 Category {CategoryId} loaded from DB and cached", id);
 
@@ -119,25 +122,21 @@ namespace MiniPOS.API.Application.Services
             var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == request.Id);
             _logger.LogInformation("Check updating category {CategoryId} for shop {ShopId}", request.Id, category?.ShopId);
             if (category == null)
-                return Result<GetCategoryDto>.Failure(new Error(ErrorCodes.NotFound, "Category not found from update. "));
+                return Result<GetCategoryDto>.Failure(new Error(ErrorCodes.Validation, "Category not found from update. "));
             _mapper.Map(request, category);
-    
+
             _context.Categories.Update(category);
 
             try
             {
                 await _context.SaveChangesAsync();
 
-                // Invalidate caches
-                _cache.Remove(GetCacheKeyForCategory(category.Id));
-                _cache.Remove(GetCacheKeyForStore(category.ShopId));
 
                 var updatedCategory = await _context.Categories
                     .Where(c => c.Id == category.Id)
                     .ProjectTo<GetCategoryDto>(_mapper.ConfigurationProvider)
                     .FirstAsync();
 
-                _cache.Set(GetCacheKeyForCategory(category.Id), updatedCategory, CacheDuration);
 
                 return Result<GetCategoryDto>.Success(updatedCategory);
             }
@@ -152,7 +151,7 @@ namespace MiniPOS.API.Application.Services
         {
             var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id);
             if (category == null)
-                return Result<bool>.Failure(new Error(ErrorCodes.NotFound, "Category not found."));
+                return Result<bool>.Failure(new Error(ErrorCodes.Validation, "Category not found."));
 
             _context.Categories.Remove(category);
 
@@ -160,11 +159,8 @@ namespace MiniPOS.API.Application.Services
             {
                 await _context.SaveChangesAsync();
 
-                // Invalidate caches
-                _cache.Remove(GetCacheKeyForCategory(id));
-                _cache.Remove(GetCacheKeyForStore(category.ShopId));
 
-               return Result<bool>.Success(true);
+                return Result<bool>.Success(true);
             }
             catch (Exception ex)
             {
@@ -172,5 +168,27 @@ namespace MiniPOS.API.Application.Services
                 return Result<bool>.Failure(new Error(ErrorCodes.BadRequest, ex.Message));
             }
         }
+
+        // get all category no pagination
+        public async Task<Result<List<GetCategoryDto>>> GetAllCategoriesAsync(Guid shopId)
+        {
+            try
+            {
+                var categories = await _context.Categories
+                    .Where(c => c.ShopId == shopId)
+                    .AsNoTracking()
+                    .ProjectTo<GetCategoryDto>(_mapper.ConfigurationProvider)
+                    .ToListAsync();
+
+                return Result<List<GetCategoryDto>>.Success(categories);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get all categories without pagination for shop {ShopId}", shopId);
+                return Result<List<GetCategoryDto>>.Failure(new Error("Category.GetAllNoPagination.Failed", ex.Message));
+            }
+        }
+
+
     }
 }

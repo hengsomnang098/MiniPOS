@@ -13,14 +13,17 @@ interface AppPaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  hasData?: boolean; // ✅ new prop to control visibility
 }
 
 export default function AppPagination({
   currentPage,
   totalPages,
   onPageChange,
+  hasData = true,
 }: AppPaginationProps) {
-  if (totalPages <= 1) return null;
+  // 🛑 Don't show if there are no pages OR no data
+  if (!hasData || totalPages <= 1) return null;
 
   return (
     <Pagination className="mt-4 justify-end">
@@ -29,7 +32,7 @@ export default function AppPagination({
         <PaginationItem>
           <PaginationPrevious
             onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
-            className={currentPage === 1 ? " cursor-pointer opacity-50" : ""}
+            className={currentPage === 1 ? "cursor-pointer opacity-50" : ""}
           />
         </PaginationItem>
 
@@ -61,9 +64,7 @@ export default function AppPagination({
               currentPage < totalPages && onPageChange(currentPage + 1)
             }
             className={
-              currentPage === totalPages
-                ? "cursor-pointer opacity-50"
-                : ""
+              currentPage === totalPages ? "cursor-pointer opacity-50" : ""
             }
           />
         </PaginationItem>

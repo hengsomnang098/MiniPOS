@@ -7,7 +7,7 @@ namespace MiniPOS.API.Application.Contracts
 {
     public interface IShopUserRepository
     {
-        Task<Result<IEnumerable<ShopUserDto>>> GetUsersByShopAsync(Guid shopId);
+        Task<PaginatedResult<ShopUserDto>> GetUsersByShopAsync(int page, int pageSize, Guid shopId, string search = null);
         Task<Result<IEnumerable<GetShopDto>>> GetShopsByUserAsync(Guid userId);
         Task<Result<IEnumerable<ShopUserDto>>> AssignUsersToShopAsync(Guid shopId, List<Guid> userIds);
         Task<Result> RemoveUserFromShopAsync(Guid shopId, Guid userId);

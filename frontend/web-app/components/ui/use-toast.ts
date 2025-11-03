@@ -10,12 +10,13 @@ type ToastOptions = {
 
 export function useToast() {
   return {
-    toast: ({ title, description, variant }: ToastOptions) => {
+    toast: ({ title, description, variant, }: ToastOptions) => {
       if (variant === "destructive") {
         sonnerToast.error(title, { description });
       } else {
         sonnerToast.success(title, { description });
       }
+
     },
   };
 }

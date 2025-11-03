@@ -1,5 +1,6 @@
 
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.Shop;
@@ -21,21 +22,39 @@ namespace MiniPOS.API.Application.Services
             _mapper = mapper;
         }
 
-        public async Task<Result<IEnumerable<ShopUserDto>>> GetUsersByShopAsync(Guid shopId)
+        public async Task<PaginatedResult<ShopUserDto>> GetUsersByShopAsync(int page, int pageSize, Guid shopId, string search = null)
         {
-            var shop = await _context.Shops
-                .Include(s => s.ShopUsers)
-                .ThenInclude(su => su.User)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == shopId);
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
 
-            if (shop == null)
-                return Result<IEnumerable<ShopUserDto>>.NotFound();
+            var query = _context.ShopUsers.AsNoTracking();
 
-            var shopUsers = shop.ShopUsers;
-            var mapped = _mapper.Map<IEnumerable<ShopUserDto>>(shopUsers);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim().ToLower();
+                query = query.Where(su =>
+                    su.User.FullName.ToLower().Contains(search)
+                );
+            }
 
-            return Result<IEnumerable<ShopUserDto>>.Success(mapped);
+            var total = await query.CountAsync(su => su.ShopId == shopId);
+            var totalPages = (int)Math.Ceiling(total / (double)pageSize);
+
+            var shopUsers = await query
+                .Where(su => su.ShopId == shopId)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ProjectTo<ShopUserDto>(_mapper.ConfigurationProvider)
+                .ToListAsync();
+
+            var result = PaginatedResult<ShopUserDto>.Success(
+                items: shopUsers,
+                pageCount: total,
+                pageNumber: page,
+                pageSize: pageSize,
+                totalPages: totalPages
+            );
+            return result;
         }
 
         public async Task<Result<IEnumerable<GetShopDto>>> GetShopsByUserAsync(Guid userId)

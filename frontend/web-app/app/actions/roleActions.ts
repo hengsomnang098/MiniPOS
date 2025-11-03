@@ -33,7 +33,9 @@ export async function getRole(id: string): Promise<Roles & { success: boolean; e
 
 export async function createRole(data: Partial<Roles>) {
   try {
-    return await fetchWrapper.post(baseUrl, data);
+    const res = await fetchWrapper.post(baseUrl, data);
+    console.log(res)
+    return res;
   } catch (error: any) {
     console.error("Create role error:", error);
     if (error.code === "ValidationError") {
@@ -55,6 +57,7 @@ export async function updateRole(id: string, role: Partial<Roles>) {
     return await fetchWrapper.put(`${baseUrl}/${id}`, role);
   } catch (error: any) {
     console.error("Update role error:", error);
+    console.error("Create role error:", error);
     if (error.code === "ValidationError") {
       return {
         success: false,

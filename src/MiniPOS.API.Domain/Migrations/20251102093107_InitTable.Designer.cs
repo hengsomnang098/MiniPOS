@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MiniPOS.API.Domain.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251031072733_InitTable")]
+    [Migration("20251102093107_InitTable")]
     partial class InitTable
     {
         /// <inheritdoc />
@@ -138,6 +138,9 @@ namespace MiniPOS.API.Domain.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
@@ -148,6 +151,9 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -170,6 +176,9 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -213,6 +222,9 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -240,8 +252,14 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Property<string>("CategoryName")
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("ShopId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -256,8 +274,14 @@ namespace MiniPOS.API.Domain.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Name")
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -265,6 +289,49 @@ namespace MiniPOS.API.Domain.Migrations
                         .IsUnique();
 
                     b.ToTable("Permissions");
+                });
+
+            modelBuilder.Entity("MiniPOS.API.Domain.Product", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CostPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ServiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("MiniPOS.API.Domain.RolePermission", b =>
@@ -291,17 +358,18 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("CategoryId1")
-                        .HasColumnType("uuid");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
-
-                    b.HasIndex("CategoryId1");
 
                     b.ToTable("Services");
                 });
@@ -325,6 +393,9 @@ namespace MiniPOS.API.Domain.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("SubscriptionStartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("UserId")
@@ -420,12 +491,22 @@ namespace MiniPOS.API.Domain.Migrations
             modelBuilder.Entity("MiniPOS.API.Domain.Category", b =>
                 {
                     b.HasOne("MiniPOS.API.Domain.Shop", "Shop")
-                        .WithMany()
+                        .WithMany("Categories")
                         .HasForeignKey("ShopId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Shop");
+                });
+
+            modelBuilder.Entity("MiniPOS.API.Domain.Product", b =>
+                {
+                    b.HasOne("MiniPOS.API.Domain.Service", "Service")
+                        .WithMany("Products")
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("MiniPOS.API.Domain.RolePermission", b =>
@@ -450,14 +531,10 @@ namespace MiniPOS.API.Domain.Migrations
             modelBuilder.Entity("MiniPOS.API.Domain.Service", b =>
                 {
                     b.HasOne("MiniPOS.API.Domain.Category", "Category")
-                        .WithMany()
+                        .WithMany("Services")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("MiniPOS.API.Domain.Category", null)
-                        .WithMany("Services")
-                        .HasForeignKey("CategoryId1");
 
                     b.Navigation("Category");
                 });
@@ -516,8 +593,15 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Navigation("RolePermissions");
                 });
 
+            modelBuilder.Entity("MiniPOS.API.Domain.Service", b =>
+                {
+                    b.Navigation("Products");
+                });
+
             modelBuilder.Entity("MiniPOS.API.Domain.Shop", b =>
                 {
+                    b.Navigation("Categories");
+
                     b.Navigation("ShopUsers");
                 });
 #pragma warning restore 612, 618

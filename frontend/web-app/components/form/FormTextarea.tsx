@@ -1,51 +1,50 @@
 "use client";
 
 import { Textarea } from "@/components/ui/textarea";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { UseFormReturn } from "react-hook-form";
+import { FieldError } from "react-hook-form";
 
 interface FormTextareaProps {
-  form: UseFormReturn<any>;
-  name: string;
+  id: string;
   label: string;
   placeholder?: string;
+  register: any; // field from Controller
   disabled?: boolean;
   required?: boolean;
   className?: string;
   rows?: number;
+  error?: FieldError;
 }
 
 export function FormTextarea({
-  form,
-  name,
+  id,
   label,
   placeholder,
+  register,
   disabled = false,
   required = false,
   className,
   rows = 3,
+  error,
 }: FormTextareaProps) {
   return (
-    <FormField
-      control={form.control}
-      name={name}
-      render={({ field }) => (
-        <FormItem className={className}>
-          <FormLabel className={required ? "after:content-['*'] after:ml-0.5 after:text-red-500" : ""}>
-            {label}
-          </FormLabel>
-          <FormControl>
-            <Textarea
-              placeholder={placeholder}
-              disabled={disabled}
-              className="w-full resize-none"
-              rows={rows}
-              {...field}
-            />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
+    <div className={`mb-4 ${className ?? ""}`}>
+      <label
+        htmlFor={id}
+        className={`block text-sm font-medium mb-1 ${
+          required ? "after:content-['*'] after:ml-0.5 after:text-red-500" : ""
+        }`}
+      >
+        {label}
+      </label>
+      <Textarea
+        id={id}
+        placeholder={placeholder}
+        disabled={disabled}
+        rows={rows}
+        className={`w-full resize-none ${error ? "border-red-500" : ""}`}
+        {...register}
+      />
+      {error && <p className="text-sm text-red-500 mt-1">{error.message}</p>}
+    </div>
   );
 }

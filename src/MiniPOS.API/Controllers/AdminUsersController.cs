@@ -5,6 +5,7 @@ using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.User;
 using MiniPOS.API.Authorization;
 using MiniPOS.API.Common.Constants;
+using MiniPOS.API.Common.Results;
 
 namespace MiniPOS.API.Controllers
 {
@@ -24,12 +25,23 @@ namespace MiniPOS.API.Controllers
             _logger = logger;
         }
 
+        [HttpGet("alldata")]
+        [HasPermission(Permissions.Users.View)]
+        public async Task<ActionResult<IEnumerable<GetUserDto>>> GetAllData()
+        {
+            var result = await _userRepository.GetAllData();
+            return ToActionResult(result);
+        }
+
         [HttpGet]
         [HasPermission(Permissions.Users.View)]
-        public async Task<ActionResult<IEnumerable<GetUserDto>>> GetAll()
+        public async Task<ActionResult<PaginatedResult<GetUserDto>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string search = null)
         {
-            var result = await _userRepository.GetAllAsync();
-            return ToActionResult(result);
+            var result = await _userRepository.GetAllAsync(page, pageSize, search);
+            return Ok(result);
         }
 
         [HttpGet("{id}")]

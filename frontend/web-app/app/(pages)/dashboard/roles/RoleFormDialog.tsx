@@ -91,6 +91,9 @@ export default function RoleFormDialog({ open, setOpen, onSubmit, role, permissi
       <Controller
         name="description"
         control={control}
+        rules={{
+          required:"Description is required"
+        }}
         render={({ field }) => (
           <FormInput
             id="description"

@@ -48,42 +48,62 @@ export function RolesList({
     async function handleCreate(data: Partial<Roles>) {
         startTransition(async () => {
             const result = await createRole(data);
-
-            if (result && !('error' in result)) {
-                setRoles((prev) => [...prev, result]);
+            if (result.validationErrors || result.errors) {
+                let errorMessages = [];
+                if (typeof result.validationErrors === "object" && result.validationErrors !== null) {
+                    // Flatten all error messages from the object
+                    errorMessages = Object.values(result.validationErrors).flat();
+                } else if (Array.isArray(result.validationErrors)) {
+                    errorMessages = result.validationErrors;
+                } else if (result.message) {
+                    errorMessages = [result.message];
+                } else {
+                    errorMessages = ["An error occurred."];
+                }
                 toast({
-                    title: "✅ Role Created",
-                    description: `${result.name} added successfully.`,
-                });
-            } else {
-                toast({
-                    title: "Failed to Create Role",
-                    description: (result && 'error' in result && result.error) || "An unknown error occurred.",
+                    title: "Failed to Create User",
+                    description: errorMessages.join("\n"),
                     variant: "destructive",
                 });
+                return;
             }
+            toast({
+                title: "✅ Role Created",
+                description: `${result.name} created successfully.`,
+            });
+            setRoles((prev) => [...prev, result]);
         })
     }
 
     async function handleUpdate(id: string, data: Partial<Roles>) {
         startTransition(async () => {
             const result = await updateRole(id, data);
-
-            if (result && !('error' in result)) {
-                setRoles((prev) =>
-                    prev.map((role) => (role.id === id ? result : role))
-                );
-                toast({
-                    title: "✅ Role Updated",
-                    description: `${result.name} updated successfully.`,
-                });
-            } else {
+            if (result.validationErrors || result.errors) {
+                let errorMessages = [];
+                if (typeof result.validationErrors === "object" && result.validationErrors !== null) {
+                    // Flatten all error messages from the object
+                    errorMessages = Object.values(result.validationErrors).flat();
+                } else if (Array.isArray(result.validationErrors)) {
+                    errorMessages = result.validationErrors;
+                } else if (result.message) {
+                    errorMessages = [result.message];
+                } else {
+                    errorMessages = ["An error occurred."];
+                }
                 toast({
                     title: "Failed to Update Role",
-                    description: (result && 'error' in result && result.error) || "An unknown error occurred.",
+                    description: errorMessages.join("\n"),
                     variant: "destructive",
                 });
+                return;
             }
+            toast({
+                title: "✅ Role Updated",
+                description: `${result.name} updated successfully.`,
+            });
+            setRoles((prev) =>
+                prev.map((role) => (role.id === id ? result : role))
+            );
         });
     }
 

@@ -5,6 +5,7 @@ using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.Category;
 using MiniPOS.API.Authorization;
 using MiniPOS.API.Common.Constants;
+using MiniPOS.API.Common.Results;
 
 namespace MiniPOS.API.Controllers
 {
@@ -23,13 +24,27 @@ namespace MiniPOS.API.Controllers
             _logger = logger;
         }
 
+        // ✅ GET: /api/categories/shop/{shopId}/all
+        [HttpGet("shop/{shopId:guid}/all")]
+        [HasPermission(Permissions.Categories.View)]
+        public async Task<ActionResult<List<GetCategoryDto>>> GetAllCategories([FromRoute] Guid shopId)
+        {
+            var result = await _categoryRepository.GetAllCategoriesAsync(shopId);
+            return ToActionResult(result);
+        }
+
         // ✅ GET: /api/categories/shop/{shopId}
         [HttpGet("shop/{shopId:guid}")]
         [HasPermission(Permissions.Categories.View)]
-        public async Task<ActionResult<List<GetCategoryDto>>> GetAllByShopId([FromRoute] Guid shopId)
+        public async Task<ActionResult<PaginatedResult<GetCategoryDto>>> GetAll(
+            [FromRoute] Guid shopId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string search = null
+            )
         {
-            var result = await _categoryRepository.GetAllAsync(shopId);
-            return ToActionResult(result);
+            var result = await _categoryRepository.GetAllAsync(shopId, page, pageSize, search);
+            return Ok(result);
         }
 
         // ✅ GET: /api/categories/{id}

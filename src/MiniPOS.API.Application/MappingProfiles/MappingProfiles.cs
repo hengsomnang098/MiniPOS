@@ -5,6 +5,7 @@ using MiniPOS.API.Application.DTOs.Service;
 using MiniPOS.API.Application.DTOs.Shop;
 using MiniPOS.API.Application.DTOs.ShopUser;
 using MiniPOS.API.Application.DTOs.User;
+using MiniPOS.API.Application.DTOs.Product;
 using MiniPOS.API.Domain;
 
 namespace MiniPOS.API.Application
@@ -20,25 +21,42 @@ namespace MiniPOS.API.Application
 
             CreateMap<CreateCategoryDto, Category>()
                 .ForMember(dest => dest.ShopId, opt => opt.MapFrom(src => src.ShopId))
-                .ForMember(dest => dest.Id, opt => opt.Ignore()); // ensure EF creates the PK
+                .ForMember(dest => dest.Id, opt => opt.Ignore()); // EF handles PK
 
             CreateMap<UpdateCategoryDto, Category>()
                 .ForMember(dest => dest.ShopId, opt => opt.MapFrom(src => src.ShopId))
                 .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
-            // Service Mappings
+            // ⚙️ Service Mappings
             CreateMap<Service, GetServiceDto>()
                 .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId))
                 .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category != null ? src.Category.CategoryName : string.Empty));
 
             CreateMap<CreateServiceDto, Service>()
                 .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId))
-                .ForMember(dest => dest.Id, opt => opt.Ignore()); // ensure EF creates the
+                .ForMember(dest => dest.Id, opt => opt.Ignore()); // EF creates PK
 
             CreateMap<UpdateServiceDto, Service>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore()) // prevent PK overwrite
                 .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId))
                 .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
-                
+
+            // 🛒 Product Mappings
+            CreateMap<Product, ProductDto>()
+                .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.Name))
+                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Service.Category.CategoryName))
+                .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.Service.Category.Id))
+                .ReverseMap();
+
+            CreateMap<ProductCreateDto, Product>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore()) // let EF handle Id
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore()) // handled automatically
+                .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
+
+            CreateMap<ProductUpdateDto, Product>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
             // 👥 ShopUser Mappings
             CreateMap<ShopUser, ShopUserDto>()
@@ -46,7 +64,7 @@ namespace MiniPOS.API.Application
                 .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User != null ? src.User.FullName : string.Empty));
 
             CreateMap<ShopUserCreateDto, ShopUser>()
-                .ForMember(dest => dest.UserId, opt => opt.Ignore()) // ShopUserCreateDto.UserId[] is multiple
+                .ForMember(dest => dest.UserId, opt => opt.Ignore()) // multiple UserIds
                 .ForMember(dest => dest.ShopId, opt => opt.MapFrom(src => src.ShopId));
 
             // 🏪 Shop Mappings
@@ -57,8 +75,8 @@ namespace MiniPOS.API.Application
             CreateMap<CreateShopDto, Shop>();
 
             CreateMap<UpdateShopDto, Shop>()
-                .ForMember(dest => dest.Id, opt => opt.Ignore()) // prevent PK overwrite
-                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore()) // never touch CreatedAt
+                .ForMember(dest => dest.Id, opt => opt.Ignore()) // no PK overwrite
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore()) // never change
                 .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
             // 👤 User Mappings

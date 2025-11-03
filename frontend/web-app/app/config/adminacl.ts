@@ -1,4 +1,13 @@
-import { LucideIcon, Users, Store, ShieldCheck } from "lucide-react";
+import {
+    LucideIcon,
+    Store,
+    Package,
+    Wrench,
+    Users,
+    Shield,
+    Settings,
+    Tags,
+} from "lucide-react";
 
 export interface SidebarItem {
     title: string;
@@ -14,33 +23,37 @@ export interface SidebarGroup {
 
 export const sidebarGroups: SidebarGroup[] = [
     {
-        title: "Select Shop",
-        items: [
-            {
-                title: "Select Shops",
+        title:"Select Shop",
+        items:[
+           {
+                title: "Select Shop",
                 href: "/",
-                icon: Store,
+                icon: Tags, // 🏷️ tags are intuitive for categories
                 permission: "Shops.View",
             },
-
-        ],
+        ]
     },
     {
         title: "Management Shop",
         items: [
-
             {
                 title: "Categories",
                 href: "/dashboard/categories",
-                icon: ShieldCheck,
+                icon: Tags, // 🏷️ tags are intuitive for categories
                 permission: "Categories.View",
             },
             {
                 title: "Manage Services",
                 href: "/dashboard/services",
-                icon: ShieldCheck,
+                icon: Wrench, // 🔧 represents managing or configuring services
                 permission: "Services.View",
-            }
+            },
+            {
+                title: "Products",
+                href: "/dashboard/products",
+                icon: Package, // 📦 product/package icon for product management
+                permission: "Products.View",
+            },
         ],
     },
     {
@@ -49,20 +62,26 @@ export const sidebarGroups: SidebarGroup[] = [
             {
                 title: "Manage Users",
                 href: "/dashboard/users",
-                icon: Users,
+                icon: Users, // 👥 classic for users
                 permission: "Users.View",
             },
             {
                 title: "Manage Roles",
                 href: "/dashboard/roles",
-                icon: ShieldCheck,
+                icon: Shield, // 🛡️ for roles/permissions
                 permission: "Roles.View",
             },
             {
                 title: "Manage Shops",
                 href: "/dashboard/shops",
-                icon: Store,
+                icon: Store, // 🏪 store for shop management
                 permission: "Shops.ViewPage",
+            },
+            {
+                title: "Settings",
+                href: "/dashboard/settings",
+                icon: Settings, // ⚙️ global admin settings
+                permission: "Settings.View",
             },
         ],
     },

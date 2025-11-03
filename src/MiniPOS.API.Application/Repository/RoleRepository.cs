@@ -18,12 +18,17 @@ namespace MiniPOS.API.Application.Services
         private readonly IMapper _mapper;
         private readonly IMemoryCache _cache;
         private readonly ILogger<RoleRepository> _logger;
+        private readonly RoleManager<ApplicationRole> _roleManager;
 
         private const string RolesCacheKey = "all_roles";
         private const string PermissionsCacheKey = "all_permissions";
-        private readonly RoleManager<ApplicationRole> _roleManager;
 
-        public RoleRepository(ApplicationDbContext context, IMapper mapper, IMemoryCache cache, ILogger<RoleRepository> logger, RoleManager<ApplicationRole> roleManager)
+        public RoleRepository(
+            ApplicationDbContext context,
+            IMapper mapper,
+            IMemoryCache cache,
+            ILogger<RoleRepository> logger,
+            RoleManager<ApplicationRole> roleManager)
         {
             _context = context;
             _mapper = mapper;
@@ -32,7 +37,7 @@ namespace MiniPOS.API.Application.Services
             _roleManager = roleManager;
         }
 
-        // ✅ Get all roles (cached)
+        // ✅ Get all roles (cached, no heavy includes)
         public async Task<Result<List<GetRoleDto>>> GetAllAsync()
         {
             if (_cache.TryGetValue(RolesCacheKey, out List<GetRoleDto> cachedRoles))
@@ -44,9 +49,8 @@ namespace MiniPOS.API.Application.Services
             _logger.LogInformation("CACHE MISS: Roles fetched from database");
 
             var roles = await _context.Roles
+                .OrderBy(r=>r.CreatedAt)
                 .AsNoTracking()
-                .Include(r => r.RolePermissions)
-                .ThenInclude(rp => rp.Permission)
                 .ProjectTo<GetRoleDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();
 
@@ -58,7 +62,7 @@ namespace MiniPOS.API.Application.Services
             return Result<List<GetRoleDto>>.Success(roles);
         }
 
-        // ✅ Get role by ID (uses cached list when available)
+        // ✅ Get role by ID (loads permissions)
         public async Task<Result<GetRoleDto>> GetByIdAsync(Guid id)
         {
             if (_cache.TryGetValue(RolesCacheKey, out List<GetRoleDto> cachedRoles))
@@ -92,13 +96,16 @@ namespace MiniPOS.API.Application.Services
             try
             {
                 var permissions = await _context.Permissions
-                   .Where(p => createDto.PermissionIds.Contains(p.Id))
-                   .ToListAsync();
+                    .Where(p => createDto.PermissionIds.Contains(p.Id))
+                    .ToListAsync();
 
                 if (permissions.Count != createDto.PermissionIds.Count())
-                    return Result<GetRoleDto>.Failure(new Error(ErrorCodes.BadRequest, "One or more permission IDs are invalid"));
+                    return Result<GetRoleDto>.Failure(new Error(ErrorCodes.Validation, "One or more permission IDs are invalid"));
 
                 var role = _mapper.Map<ApplicationRole>(createDto);
+                if (role == null)
+                    return Result<GetRoleDto>.Failure(new Error(ErrorCodes.Validation, "Invalid role data"));
+
                 role.NormalizedName = createDto.Name.ToUpper();
 
                 await _context.Roles.AddAsync(role);
@@ -107,7 +114,6 @@ namespace MiniPOS.API.Application.Services
                 {
                     RoleId = role.Id,
                     PermissionId = pid
-
                 }).ToList();
 
                 await _context.RolePermissions.AddRangeAsync(rolePermissions);
@@ -118,6 +124,7 @@ namespace MiniPOS.API.Application.Services
                 _logger.LogInformation("CACHE INVALIDATE: Roles cache cleared after new role created");
 
                 var roleWithPermissions = await _context.Roles
+                    .AsNoTracking()
                     .Include(r => r.RolePermissions)
                     .ThenInclude(rp => rp.Permission)
                     .FirstOrDefaultAsync(r => r.Id == role.Id);
@@ -126,37 +133,33 @@ namespace MiniPOS.API.Application.Services
 
                 return Result<GetRoleDto>.Success(result);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while creating a new role.");
                 return Result<GetRoleDto>.Failure(new Error(ErrorCodes.Failure, "An unexpected error occurred while creating the role."));
             }
         }
 
-        // ✅ Update role and invalidate cache
+        // ✅ Update role efficiently
         public async Task<Result<GetRoleDto>> UpdateAsync(Guid id, UpdateRoleDto updateDto)
         {
             try
             {
-                // ✅ Fetch role via RoleManager to ensure it's tracked by Identity
                 var role = await _roleManager.FindByIdAsync(id.ToString());
                 if (role == null)
-                    return Result<GetRoleDto>.Failure(new Error(ErrorCodes.NotFound, "Role not found"));
+                    return Result<GetRoleDto>.Failure(new Error(ErrorCodes.Validation, "Role not found"));
 
-                // ✅ Validate permissions
                 var permissions = await _context.Permissions
                     .Where(p => updateDto.PermissionIds.Contains(p.Id))
                     .ToListAsync();
 
                 if (permissions.Count != updateDto.PermissionIds.Count())
-                    return Result<GetRoleDto>.Failure(new Error(ErrorCodes.BadRequest, "One or more permission IDs are invalid"));
+                    return Result<GetRoleDto>.Failure(new Error(ErrorCodes.Validation, "One or more permission IDs are invalid"));
 
-                // ✅ Update fields
                 role.Name = updateDto.Name;
                 role.Description = updateDto.Description;
                 role.NormalizedName = updateDto.Name.ToUpper();
 
-                // ✅ Update using RoleManager (important for Identity)
                 var identityResult = await _roleManager.UpdateAsync(role);
                 if (!identityResult.Succeeded)
                 {
@@ -165,7 +168,6 @@ namespace MiniPOS.API.Application.Services
                     return Result<GetRoleDto>.Failure(new Error(ErrorCodes.Failure, errorMsg));
                 }
 
-                // ✅ Sync RolePermissions (EF directly)
                 var existingPermissions = _context.RolePermissions.Where(rp => rp.RoleId == id);
                 _context.RolePermissions.RemoveRange(existingPermissions);
 
@@ -176,14 +178,13 @@ namespace MiniPOS.API.Application.Services
                 }).ToList();
 
                 await _context.RolePermissions.AddRangeAsync(newPermissions);
-                await _context.SaveChangesAsync();  
+                await _context.SaveChangesAsync();
 
-                // ✅ Invalidate cache
                 _cache.Remove(RolesCacheKey);
                 _logger.LogInformation("CACHE INVALIDATE: Roles cache cleared after role update");
 
-                // ✅ Fetch updated role with permissions
                 var updatedRole = await _context.Roles
+                    .AsNoTracking()
                     .Include(r => r.RolePermissions)
                     .ThenInclude(rp => rp.Permission)
                     .FirstOrDefaultAsync(r => r.Id == id);
@@ -198,33 +199,31 @@ namespace MiniPOS.API.Application.Services
             }
         }
 
-        // ✅ Delete role and invalidate cache
+        // ✅ Delete role (no Include)
         public async Task<Result<bool>> DeleteAsync(Guid id)
         {
             try
             {
-                var role = await _context.Roles
-                .Include(r => r.Users)
-                .FirstOrDefaultAsync(r => r.Id == id);
-                if (role.Name == "Super Admin")
-                    return Result<bool>.Failure(new Error(ErrorCodes.BadRequest, "Cannot delete Super Admin role"));
-
+                var role = await _context.Roles.FirstOrDefaultAsync(r => r.Id == id);
                 if (role == null)
                     return Result<bool>.Failure(new Error(ErrorCodes.NotFound, "Role not found"));
 
-                if (role.Users.Any())
+                if (role.Name == "Super Admin")
+                    return Result<bool>.Failure(new Error(ErrorCodes.BadRequest, "Cannot delete Super Admin role"));
+
+                bool hasUsers = await _context.UserRoles.AnyAsync(ur => ur.RoleId == id);
+                if (hasUsers)
                     return Result<bool>.Failure(new Error(ErrorCodes.BadRequest, "Cannot delete role with assigned users"));
 
                 _context.Roles.Remove(role);
                 await _context.SaveChangesAsync();
 
-                // ✅ Invalidate cache
                 _cache.Remove(RolesCacheKey);
                 _logger.LogInformation("CACHE INVALIDATE: Roles cache cleared after role deletion");
 
                 return Result<bool>.Success(true);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while deleting role {RoleId}.", id);
                 return Result<bool>.Failure(new Error(ErrorCodes.Failure, "An unexpected error occurred while deleting the role."));
@@ -254,14 +253,14 @@ namespace MiniPOS.API.Application.Services
 
                 return Result<List<PermissionDto>>.Success(permissions);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while fetching available permissions.");
                 return Result<List<PermissionDto>>.Failure(new Error(ErrorCodes.Failure, "An unexpected error occurred while fetching permissions."));
             }
         }
 
-        // ✅ Optional: cache role permissions individually
+        // ✅ Optimized role permissions query (no Include)
         public async Task<Result<List<PermissionDto>>> GetRolePermissionsAsync(Guid id)
         {
             try
@@ -275,12 +274,11 @@ namespace MiniPOS.API.Application.Services
 
                 _logger.LogInformation("CACHE MISS: Permissions for Role {RoleId} fetched from database", id);
 
-                var role = await _context.Roles.FirstOrDefaultAsync(r => r.Id == id);
-                if (role == null)
+                var roleExists = await _context.Roles.AnyAsync(r => r.Id == id);
+                if (!roleExists)
                     return Result<List<PermissionDto>>.Failure(new Error(ErrorCodes.NotFound, "Role not found"));
 
                 var permissions = await _context.RolePermissions
-                    .Include(rp => rp.Permission)
                     .Where(rp => rp.RoleId == id)
                     .Select(rp => rp.Permission)
                     .ProjectTo<PermissionDto>(_mapper.ConfigurationProvider)
@@ -290,7 +288,7 @@ namespace MiniPOS.API.Application.Services
 
                 return Result<List<PermissionDto>>.Success(permissions);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while fetching permissions for role {RoleId}.", id);
                 return Result<List<PermissionDto>>.Failure(new Error(ErrorCodes.Failure, "An unexpected error occurred while fetching role permissions."));

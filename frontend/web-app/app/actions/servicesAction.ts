@@ -1,16 +1,39 @@
 "use server"
 import { FetchWrapper } from "@/lib/fetchWrapper";
+import { PageResult } from "@/types/pageResult";
 import { Services } from "@/types/service";
 
 const baseUrl = "/api/Service";
 
-export async function getServices():Promise<Services[]> {
+
+export async function getServices(query: string, shopId: string): Promise<PageResult<Services>> {
     try {
-        const res= await FetchWrapper.get(baseUrl);
+        const normalizedQuery = query.startsWith("?") ? query : `?${query}`;
+        const res = await FetchWrapper.get(`${baseUrl}/shop/${shopId}${normalizedQuery}`);
         return res;
-    } catch (error:any) {
-        console.error("Error fetching services:", error);
-        throw new Error("Failed to fetch services");
+    } catch (error: any)  {
+        console.error("Get service error",error)
+        return {
+            isSuccess: false,
+            items: [],
+            pageCount: 0,
+            pageNumber: 1,
+            pageSize: 10,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPreviousPage: false,
+            errors: [error.message],
+        };
+    }
+}
+
+export async function getServicesByCategory(categoryId: string): Promise<Services[]> {
+    try {
+        const res = await FetchWrapper.get(`${baseUrl}/${categoryId}/list`);
+        return res;
+    } catch (error: any) {
+        console.error("Get services by category error:", error);
+        return [];
     }
 }
 

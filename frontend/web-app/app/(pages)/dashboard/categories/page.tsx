@@ -10,9 +10,10 @@ export default async function page() {
     if (!shopId) {
         return redirect('/');
     }
+    const query = "?page=1&pageSize=5";
 
     const [categories] = await Promise.all([
-        getCategoryByShop(shopId)
+        getCategoryByShop(query,shopId)
     ]);
 
     return (

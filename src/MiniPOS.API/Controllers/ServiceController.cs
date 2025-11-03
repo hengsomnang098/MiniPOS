@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.Service;
 using MiniPOS.API.Authorization;
 using MiniPOS.API.Common.Constants;
+using MiniPOS.API.Common.Results;
+using MiniPOS.API.Domain;
 
 namespace MiniPOS.API.Controllers
 {
@@ -15,17 +18,34 @@ namespace MiniPOS.API.Controllers
     public class ServiceController : BaseApiController
     {
         private readonly IServiceRepository _serviceRepository;
-        public ServiceController(IServiceRepository serviceRepository)
+        private readonly ApplicationDbContext _context;
+        public ServiceController(IServiceRepository serviceRepository,ApplicationDbContext context)
         {
             _serviceRepository = serviceRepository;
+            _context = context;
         }
 
-        [HttpGet]
+        [HttpGet("shop/{shopId}")]
         [Authorize(Policy = Permissions.Services.View)]
-        public async Task<ActionResult<IEnumerable<GetServiceDto>>> GetAll()
+        public async Task<ActionResult<PaginatedResult<GetServiceDto>>> GetAll(
+            [FromRoute] Guid shopId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string search = null)
         {
-            var result = await _serviceRepository.GetAllAsync();
-            return ToActionResult(result);
+            var result = await _serviceRepository.GetAllAsync(shopId, page, pageSize, search);
+            return Ok(result);
+        }
+
+        [HttpGet("{categoryId:guid}/list")]
+        public async Task<IActionResult> GetServicesByCategory(Guid categoryId)
+        {
+            var services = await _context.Services
+                .Where(s => s.CategoryId == categoryId)
+                .Select(s => new { s.Id, s.Name })
+                .ToListAsync();
+
+            return Ok(services);
         }
 
         [HttpGet("{id}")]

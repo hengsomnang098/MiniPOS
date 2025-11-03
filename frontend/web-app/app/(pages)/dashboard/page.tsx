@@ -1,10 +1,15 @@
 import { auth } from "@/app/auth";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
   const session = await auth();
 
   if (!session) {
     return <p>Not authenticated</p>;
+  }
+
+  if (session.expiresIn && Number(session.expiresIn) < Date.now()) {
+    redirect("/auth/login?expired=true");
   }
 
   return (

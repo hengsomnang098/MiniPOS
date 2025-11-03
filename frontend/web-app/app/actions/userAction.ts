@@ -2,24 +2,28 @@
 'use server';
 
 import { FetchWrapper } from "@/lib/fetchWrapper";
+import { PageResult } from "@/types/pageResult";
 import { Users } from "@/types/user";
 
 const base = "/api/users";
 
-export async function getUsers(): Promise<Users[] | { success: boolean; error?: string }> {
-  try {
-    const res = await FetchWrapper.get(base);
-    return res?.data ?? res ?? [];
-  } catch (error: any) {
-    console.error("Get users error:", error);
-    return { success: false, error: error?.message || "An unexpected error occurred." };
-  }
+export async function getAllUsers(): Promise<Users[]> {
+  const res = await FetchWrapper.get(`${base}/alldata`);
+  return res;
+}
+
+
+export async function getUsers(query: string): Promise<PageResult<Users>> {
+  const normalizedQuery = query.startsWith("?") ? query : `?${query}`;
+  const res = await FetchWrapper.get(`${base}${normalizedQuery}`);
+  return res;
 }
 
 export async function createUser(data: Partial<Users>) {
   try {
     const res = await FetchWrapper.post(base, data);
-    return { success: true, data: res };
+    console.log(res)
+    return res;
   } catch (error: any) {
     console.error("Create user error:", error);
     if (error.code === "ValidationError") {
@@ -46,19 +50,27 @@ export async function updateUser(
       return {
         success: false,
         validationErrors: error.validationErrors,
-        error: error.message,
+        error: error.errors,
       };
     }
     return { success: false, error: error?.message || "An unexpected error occurred." };
   }
 }
 
-export async function deleteUser(id: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteUser(id: string): Promise<any> {
   try {
-    await FetchWrapper.del(`${base}/${id}`);
-    return { success: true };
+    const res = await FetchWrapper.del(`${base}/${id}`);
+    return res;
+
   } catch (error: any) {
     console.error("Delete user error:", error);
+    if (error.code === "ValidationError") {
+      return {
+        success: false,
+        validationErrors: error.validationErrors,
+        error: error.errors,
+      };
+    }
     return { success: false, error: error?.message || "An unexpected error occurred." };
   }
 }

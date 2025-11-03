@@ -75,15 +75,25 @@ async function handleResponse(response: Response) {
     }
 
     // 🔒 Auth errors
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
         return {
             success: false,
             code: "Unauthorized",
-            status: response.status,
-            message: "Access denied or session expired",
+            status: 401,
+            message: "Session expired or not logged in.",
             redirectTo: "/auth/login",
         };
     }
+
+    if (response.status === 403) {
+        return {
+            success: false,
+            code: "Forbidden",
+            status: 403,
+            message: "You do not have permission to access this resource.",
+        };
+    }
+
 
     // ❗ Generic failure
     return {
@@ -103,18 +113,22 @@ async function request(method: string, url: string, body?: any) {
     const options: RequestInit = { method, headers };
 
     if (body !== undefined && body !== null) {
-        if (hasFile) {
+        // If caller already provided a FormData instance, use it as-is
+        if (typeof FormData !== "undefined" && body instanceof FormData) {
+            options.body = body;
+        } else if (hasFile) {
+            // Build FormData from a plain object that contains File/FileList
             const formData = new FormData();
-            for (const key in body) {
-                const value = body[key];
+            Object.keys(body).forEach((key) => {
+                const value = (body as any)[key];
                 if (typeof File !== "undefined" && value instanceof File) {
                     formData.append(key, value);
                 } else if (typeof FileList !== "undefined" && value instanceof FileList) {
                     if (value.length > 0) formData.append(key, value[0]);
                 } else if (value !== undefined && value !== null) {
-                    formData.append(key, value);
+                    formData.append(key, String(value));
                 }
-            }
+            });
             options.body = formData;
         } else {
             options.body = JSON.stringify(body);

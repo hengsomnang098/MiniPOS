@@ -18,6 +18,8 @@ namespace MiniPOS.API.Domain.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
@@ -32,7 +34,9 @@ namespace MiniPOS.API.Domain.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: true)
+                    Name = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -67,6 +71,8 @@ namespace MiniPOS.API.Domain.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     FullName = table.Column<string>(type: "text", nullable: true),
                     RoleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -212,7 +218,8 @@ namespace MiniPOS.API.Domain.Migrations
                     SubscriptionStartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     SubscriptionEndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -231,7 +238,9 @@ namespace MiniPOS.API.Domain.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     CategoryName = table.Column<string>(type: "text", nullable: true),
-                    ShopId = table.Column<Guid>(type: "uuid", nullable: false)
+                    ShopId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -276,7 +285,8 @@ namespace MiniPOS.API.Domain.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: true),
                     CategoryId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CategoryId1 = table.Column<Guid>(type: "uuid", nullable: true)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -287,11 +297,33 @@ namespace MiniPOS.API.Domain.Migrations
                         principalTable: "Categories",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Products",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: true),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    Quantity = table.Column<int>(type: "integer", nullable: false),
+                    Price = table.Column<decimal>(type: "numeric", nullable: false),
+                    CostPrice = table.Column<decimal>(type: "numeric", nullable: false),
+                    ServiceId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ImageUrl = table.Column<string>(type: "text", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Products", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Services_Categories_CategoryId1",
-                        column: x => x.CategoryId1,
-                        principalTable: "Categories",
-                        principalColumn: "Id");
+                        name: "FK_Products_Services_ServiceId",
+                        column: x => x.ServiceId,
+                        principalTable: "Services",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -348,6 +380,11 @@ namespace MiniPOS.API.Domain.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Products_ServiceId",
+                table: "Products",
+                column: "ServiceId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RolePermissions_PermissionId",
                 table: "RolePermissions",
                 column: "PermissionId");
@@ -356,11 +393,6 @@ namespace MiniPOS.API.Domain.Migrations
                 name: "IX_Services_CategoryId",
                 table: "Services",
                 column: "CategoryId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Services_CategoryId1",
-                table: "Services",
-                column: "CategoryId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Shops_UserId",
@@ -392,13 +424,16 @@ namespace MiniPOS.API.Domain.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "Products");
+
+            migrationBuilder.DropTable(
                 name: "RolePermissions");
 
             migrationBuilder.DropTable(
-                name: "Services");
+                name: "ShopUsers");
 
             migrationBuilder.DropTable(
-                name: "ShopUsers");
+                name: "Services");
 
             migrationBuilder.DropTable(
                 name: "Permissions");

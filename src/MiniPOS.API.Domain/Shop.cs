@@ -9,7 +9,9 @@ namespace MiniPOS.API.Domain
         public DateTime SubscriptionStartDate { get; set; }
         public DateTime SubscriptionEndDate { get; set; }
         public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
+
+        public ICollection<Category> Categories { get; set; }
+
 
         public ICollection<ShopUser> ShopUsers { get; set; } = new List<ShopUser>();
 

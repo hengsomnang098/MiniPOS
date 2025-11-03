@@ -7,15 +7,11 @@ import UsersList from "./UsersList";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const usersPromise = getUsers();
+  const query = "?page=1&pageSize=5";
+
+  const usersPromise = getUsers(query);
   const rolePromise = getRoles();
   const [usersResult, roles] = await Promise.all([usersPromise, rolePromise]);
-
-  // Check if usersResult is an array, otherwise handle error
-  if (!Array.isArray(usersResult)) {
-    // You can render an error message or handle it as needed
-    return <div>Error loading users: {usersResult.error || "Unknown error"}</div>;
-  }
 
   return (
     <>

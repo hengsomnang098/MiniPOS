@@ -24,6 +24,7 @@ import dynamic from "next/dynamic";
 import { DataTable } from "@/components/DataTable";
 import { useParamsStore } from "@/hooks/useParamStore";
 import { useShallow } from "zustand/shallow";
+import { AppSearch } from "@/components/AppSearch";
 
 const ShopFormDialog = dynamic(() => import("./ShopFormDialog").then(m => m.ShopFormDialog), {
     ssr: false,
@@ -43,14 +44,22 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
     const [editingShop, setEditingShop] = useState<Shops | null>(null);
 
     // ✅ Zustand pagination store
-    const { pageNumber, pageSize, totalPages, setParams } = useParamsStore(
+    const { pageNumber, pageSize, totalPages, setParams, search } = useParamsStore(
         useShallow((state) => ({
             pageNumber: state.pageNumber,
             pageSize: state.pageSize,
             totalPages: state.totalPages,
+            search: state.search,
             setParams: state.setParams,
         }))
     );
+
+    // 🔍 Handle search
+    async function handleSearch(term: string) {
+        setParams({ search: term, pageNumber: 1 });
+        await refreshPage(1, term);
+    }
+
 
     // ✅ Initialize store on mount
     useEffect(() => {
@@ -62,8 +71,9 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
     }, [initialShops, setParams]);
 
     // ✅ Helper: refresh page after CRUD
-    async function refreshPage(page = pageNumber) {
-        const query = `?page=${page}&pageSize=${pageSize}`;
+    async function refreshPage(page = pageNumber, term = search || "") {
+        const query = `?page=${page}&pageSize=${pageSize}${term ? `&search=${encodeURIComponent(term)}` : ""
+            }`;
         const result = await getShops(query);
 
         if (!result || result.isSuccess === false) {
@@ -89,25 +99,37 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
 
     // ✅ Create
     async function handleCreate(data: Partial<Shops>) {
-        startTransition(async () => {
-            const result = await createShop(data);
+        const result = await createShop(data);
 
-            if (!result.success) {
-                toast({
-                    title: "Error",
-                    description: result.error || "Failed to create shop",
-                    variant: "destructive",
+        if (result.success === false) {
+            toast({
+                title: "Error",
+                 description: result.error || result.validationErrors?.join(", ") || "An error occurred.",
+                variant: "destructive",
+            });
+            return;
+        }
+        startTransition(async () => {
+            if (pageNumber === 1) {
+                // 🧠 Prepend locally for instant update
+                setShops((prev) => {
+                    const updated = [result, ...prev];
+                    return updated.length > pageSize ? updated.slice(0, pageSize) : updated;
                 });
-                return;
+            } else {
+                // 🌐 If not on first page, just refetch
+                await refreshPage(pageNumber);
             }
 
-            toast({
-                title: "✅ Shop Created",
-                description: `${result.name} added successfully.`,
-            });
+            // Recalculate total pages if needed
+            const newTotalPages = shops.length + 1 > pageSize * totalPages ? totalPages + 1 : totalPages;
+            setParams({ totalPages: newTotalPages });
 
-            // 🔁 Refresh pagination (may increase totalPages)
-            await refreshPage();
+        });
+
+        toast({
+            title: "✅ Shop Created",
+            description: `${result.name} added successfully.`,
         });
     }
 
@@ -119,7 +141,7 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
             if (!result.success) {
                 toast({
                     title: "Error",
-                    description: result.error || "Failed to update shop",
+                    description: result.error || result.validationErrors?.join(", ") || "An error occurred.",
                     variant: "destructive",
                 });
                 return;
@@ -131,33 +153,35 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
             });
 
             setEditingShop(null);
-
-            // 🔁 Refresh the current page
-            await refreshPage();
+            setShops((prev) => {
+                return prev.map((shop) => (shop.id === id ? result.data : shop));
+            });
         });
     }
 
     // ✅ Delete
     async function handleDelete(id: string) {
+        const result = await deleteShop(id);
+        if (result.validationErrors || result.errors) {
+            toast({
+                title: "Failed to Delete Shop",
+                description: result.validationErrors?.join(", ") || result.errors || "An error occurred.",
+                variant: "destructive",
+            });
+            return;
+        }
         startTransition(async () => {
-            const result = await deleteShop(id);
-            if (result.success) {
-                toast({
-                    title: "✅ Shop Deleted",
-                    description: "Shop deleted successfully.",
-                });
+            const remaining = shops.filter((shop) => shop.id !== id);
+            setShops(remaining);
 
-                // ⚙️ If we deleted the last item on the last page, go back one page
-                const isLastItemOnPage = shops.length === 1 && pageNumber > 1;
-                const targetPage = isLastItemOnPage ? pageNumber - 1 : pageNumber;
-
-                await refreshPage(targetPage);
-            } else {
-                toast({
-                    title: "Failed to Delete Shop",
-                    description: result.error || "An unknown error occurred.",
-                    variant: "destructive",
-                });
+            // If last item on page deleted → move one page back
+            if (remaining.length === 0 && pageNumber > 1) {
+                setParams({ pageNumber: pageNumber - 1 });
+                await refreshPage(pageNumber - 1);
+            }
+            // If deleted last on last page → adjust total pages
+            else if (remaining.length === 0 && totalPages > 1 && pageNumber === totalPages) {
+                setParams({ totalPages: totalPages - 1 });
             }
         });
     }
@@ -175,6 +199,14 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
                 </PermissionButton>
             </div>
 
+            {/* 🔍 Search */}
+            <AppSearch
+                placeholder="Search by Shop Name or Owner Name..."
+                onSearch={handleSearch}
+                defaultValue={search}
+                className="max-w-md"
+            />
+
             {isPending && <LoadingPage />}
 
             <DataTable
@@ -182,8 +214,20 @@ export default function ShopsList({ initialShops, initialUser }: ShopsListProps)
                 columns={[
                     { key: "name", label: "Shop Name" },
                     { key: "user", label: "Owner Name" },
-                    { key: "subscriptionStartDate", label: "Subscription Start Date" },
-                    { key: "subscriptionEndDate", label: "Subscription End Date" },
+                    {
+                        key: "subscriptionStartDate", label: "Start Date",
+                        render: (shop) => {
+                            const startDate = (shop as Shops).subscriptionStartDate;
+                            return startDate ? new Date(startDate).toLocaleDateString() : "N/A";
+                        }
+                    },
+                    {
+                        key: "subscriptionEndDate", label: "End Date",
+                        render: (shop) => {
+                            const endDate = (shop as Shops).subscriptionEndDate;
+                            return endDate ? new Date(endDate).toLocaleDateString() : "N/A";
+                        }
+                    },
                     {
                         key: "isActive",
                         label: "Status",

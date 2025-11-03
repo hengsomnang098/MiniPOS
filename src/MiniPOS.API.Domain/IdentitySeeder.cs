@@ -64,7 +64,10 @@ namespace MiniPOS.API.Domain
                 // Add more permissions here as needed
                 "Roles.View", "Roles.Create", "Roles.Update", "Roles.Delete"
                 // Shop
-                ,"Shops.View", "Shops.Create", "Shops.Update", "Shops.Delete","Shops.ViewPage"
+                ,"Shops.View", "Shops.Create", "Shops.Update", "Shops.Delete", "Shops.ViewPage"
+                
+                 // Products
+                ,"Products.View", "Products.Create", "Products.Update", "Products.Delete","Products.ViewPage"
             };
 
             // Seed permissions if missing

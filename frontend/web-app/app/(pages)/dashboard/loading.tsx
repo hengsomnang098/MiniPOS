@@ -34,7 +34,6 @@ export default function LoadingPage() {
                             height={180}
                             sizes="(max-width: 600px) 160px, 320px"
                             priority
-                            quality={60}
                         />
 
 

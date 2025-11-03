@@ -6,10 +6,14 @@ import { Users } from '@/types/user';
 import { useToast } from '@/components/ui/use-toast';
 import { PermissionButton } from '@/components/permissionButton/PermissionButton';
 import LoadingPage from '../../loading';
-import { assignUsersToShop, removeUserFromShop } from '@/app/actions/shopUserAction';
-// import ShopUserDialog from './ShopUserDialog';
+import { assignUsersToShop, getShopUser, removeUserFromShop } from '@/app/actions/shopUserAction';
 import { DataTable } from '@/components/DataTable';
 import dynamic from 'next/dynamic';
+import { PageResult } from '@/types/pageResult';
+import { useParamsStore } from '@/hooks/useParamStore';
+import { useShallow } from "zustand/shallow";
+import AppPagination from '@/components/AppPagination';
+import { AppSearch } from '@/components/AppSearch';
 
 const ShopUserDialog = dynamic(() => import('./ShopUserDialog').then(m => m.default), {
   ssr: false,
@@ -17,21 +21,62 @@ const ShopUserDialog = dynamic(() => import('./ShopUserDialog').then(m => m.defa
 });
 
 interface ShopUsersListProps {
-  initialShopUser: ShopUser[];
+  initialShopUser: PageResult<ShopUser>;
   initialUser?: Users[];
   shopUserId?: string;
 }
 
 
 export default function ShopUsersList({ initialShopUser, initialUser, shopUserId }: ShopUsersListProps) {
-  const [shopUsers, setShopUsers] = useState(initialShopUser);
+  const [shopUsers, setShopUsers] = useState(initialShopUser.items || []);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 
-  /**
-   * Assign one or more users to the current shop
-   */
+  // ✅ Zustand pagination store
+  const { pageNumber, pageSize, totalPages, setParams, search } = useParamsStore(
+    useShallow((state) => ({
+      pageNumber: state.pageNumber,
+      pageSize: state.pageSize,
+      totalPages: state.totalPages,
+      search: state.search,
+      setParams: state.setParams,
+    }))
+  );
+
+  // ✅ Helper: refresh page after CRUD
+  async function refreshPage(page = pageNumber, term = search || "") {
+    const query = `?page=${page}&pageSize=${pageSize}${term ? `&search=${encodeURIComponent(term)}` : ""
+      }`;
+    const result = await getShopUser(query, shopUserId || "");
+
+    if (!result || result.isSuccess === false) {
+      toast({
+        title: "Error loading shops",
+        description: "Failed to refresh shop list.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setShopUsers(result.items);
+    setParams({
+      pageNumber: result.pageNumber,
+      totalPages: result.totalPages,
+    });
+  }
+
+  // 🔍 Handle search
+  async function handleSearch(term: string) {
+    setParams({ search: term, pageNumber: 1 });
+    await refreshPage(1, term);
+  }
+
+  // ✅ Pagination
+  async function handlePageChange(newPage: number) {
+    startTransition(() => refreshPage(newPage));
+  }
+
   async function handleCreate(shopId: string, userId: string[]) {
     if (!shopUserId) {
       toast({
@@ -117,15 +162,21 @@ export default function ShopUsersList({ initialShopUser, initialUser, shopUserId
         + Assign User(s)
       </PermissionButton>
 
+      {/* 🔍 Search */}
+      <AppSearch
+        placeholder="Search by  User Name"
+        onSearch={handleSearch}
+        defaultValue={search}
+        className="max-w-md"
+      />
+
       {isPending && <LoadingPage />}
 
       {/* Data Table */}
       <DataTable
         data={shopUsers}
         columns={[
-          { key: 'shopId', label: 'Shop ID' },
           { key: 'shop', label: 'Shop Name' },
-          { key: 'userId', label: 'User ID' },
           { key: 'user', label: 'User Name' },
           {
             key: 'actions',
@@ -155,6 +206,20 @@ export default function ShopUsersList({ initialShopUser, initialUser, shopUserId
         users={initialUser}
         assignedUsers={shopUsers}
       />
+
+
+      {/* ✅ Pagination */}
+      {
+        shopUsers.length > 0 && pageNumber < totalPages && (
+          <div className="flex justify-end pt-4">
+            <AppPagination
+              currentPage={pageNumber}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )
+      }
 
     </div>
   );

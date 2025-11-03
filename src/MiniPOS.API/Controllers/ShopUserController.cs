@@ -5,6 +5,7 @@ using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.DTOs.Shop;
 using MiniPOS.API.Application.DTOs.ShopUser;
 using MiniPOS.API.Common.Constants;
+using MiniPOS.API.Common.Results;
 using static MiniPOS.API.Authorization.Permissions;
 
 namespace MiniPOS.API.Controllers
@@ -24,11 +25,16 @@ namespace MiniPOS.API.Controllers
 
         [HttpGet("{shopId}/users")]
         [Authorize(Shops.View)]
-        public async Task<ActionResult<IEnumerable<ShopUserDto>>> GetUsers(Guid shopId)
+        public async Task<ActionResult<PaginatedResult<ShopUserDto>>> GetUsers(
+            Guid shopId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string search = null
+        )
         {
-            var result = await _repo.GetUsersByShopAsync(shopId);
+            var result = await _repo.GetUsersByShopAsync(page, pageSize, shopId, search);
 
-            return ToActionResult(result);
+            return Ok(result);
         }
 
         [HttpPost("{shopId}/assign")]
