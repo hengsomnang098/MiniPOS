@@ -8,9 +8,9 @@ const withBundleAnalyzer = bundleAnalyzer({
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
-    logging:{
-    fetches:{
-      fullUrl:true
+  logging: {
+    fetches: {
+      fullUrl: true
     }
   },
 
@@ -21,22 +21,12 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "techhl.b-cdn.net" },
     ],
+    deviceSizes: [64, 128, 256, 512, 1024],
   },
 
   experimental: {
     optimizeCss: true,
-    serverActions: { bodySizeLimit: "2mb" },
-  },
-
-  turbopack: {
-    resolveAlias: {
-      "@/components": "./components",
-      "@/lib": "./lib",
-      "@/hooks": "./hooks",
-      '@/types': './types',
-      "@/app": "./app", 
-      "middleware": "./middleware",
-    },
+    // serverActions: { bodySizeLimit: "5mb" },
   },
 
   compiler: {

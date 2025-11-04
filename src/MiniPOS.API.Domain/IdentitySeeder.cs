@@ -67,7 +67,10 @@ namespace MiniPOS.API.Domain
                 ,"Shops.View", "Shops.Create", "Shops.Update", "Shops.Delete", "Shops.ViewPage"
                 
                  // Products
-                ,"Products.View", "Products.Create", "Products.Update", "Products.Delete","Products.ViewPage"
+                ,"Products.View", "Products.Create", "Products.Update", "Products.Delete", "Products.ViewPage"
+                
+                // Orders
+                ,"Orders.View", "Orders.Create", "Orders.Update", "Orders.Delete",
             };
 
             // Seed permissions if missing

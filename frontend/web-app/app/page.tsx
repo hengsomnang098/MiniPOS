@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Store, Settings, ArrowRight, Waves } from "lucide-react";
 import SelectShopButton from "@/components/SelectShopButton";
 import { getShopByUser } from "./actions/shopUserAction";
+import Link from "next/link";
 
 export default async function Home() {
   const user = await getCurrentUser();
@@ -76,10 +77,10 @@ export default async function Home() {
                   className="w-full group/btn bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-0 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300"
                   size="lg"
                 >
-                  <a href="/dashboard" className="flex items-center justify-center gap-2">
+                  <Link href="/dashboard/shops" className="flex items-center justify-center gap-2">
                     <span className="font-medium">Go to Dashboard</span>
                     <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                  </a>
+                  </Link>
                 </Button>
               </CardContent>
             </Card>

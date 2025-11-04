@@ -31,7 +31,21 @@ export async function getProductsByShop(query: string, shopId: string): Promise<
     }
 }
 
-// 🔍 Get single product by id
+// � Get product by barcode within shop
+export async function getProductByBarcode(barcode: string, shopId: string): Promise<Product | any> {
+    try {
+        if (!barcode) throw new Error("Barcode is required");
+        return await FetchWrapper.get(`${baseUrl}/by-barcode/${encodeURIComponent(barcode)}?shopId=${shopId}`);
+    } catch (error: any) {
+        console.error("❌ Get product by barcode error:", error);
+        return {
+            success: false,
+            error: error.message || "Product not found",
+        };
+    }
+}
+
+// �🔍 Get single product by id
 export async function getProduct(id: string): Promise<Product | any> {
     try {
         return await FetchWrapper.getById(baseUrl, id);

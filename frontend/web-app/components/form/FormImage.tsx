@@ -33,6 +33,12 @@ export function FormImage({
                 return;
             }
 
+            // ✅ Check for 5 MB limit (5 * 1024 * 1024 bytes)
+            if (file.size > 5 * 1024 * 1024) {
+                alert("❌ File too large. Maximum allowed size is 5 MB.");
+                return;
+            }
+
             const url = URL.createObjectURL(file);
             setPreview(url);
             setFileName(file.name);
@@ -50,7 +56,7 @@ export function FormImage({
             <div
                 className={cn(
                     "relative flex flex-col items-center justify-center w-full border-2 border-dashed rounded-xl overflow-hidden cursor-pointer transition bg-muted/5 hover:border-primary/70",
-                    preview ? "bg-muted/20" : "",
+                    preview ? "bg-muted/20" : ""
                 )}
                 style={{ height }}
             >
@@ -59,6 +65,9 @@ export function FormImage({
                         <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground">
                             Click or drag an image to upload
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Max size: <span className="font-semibold">5 MB</span>
                         </p>
                         <input
                             type="file"

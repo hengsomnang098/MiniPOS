@@ -147,3 +147,14 @@
     box-shadow: 0 0 10px rgba(0, 150, 255, 0.2);
   }
 }
+
+@layer utilities {
+  .btn-deep-ocean {
+    @apply bg-gradient-to-r from-[#0f2027] via-[#203a43] to-[#2c5364] text-white shadow-md hover:opacity-90 transition-all duration-200;
+  }
+
+  .btn-deep-ocean-outline {
+    @apply border border-[#2c5364] text-[#2c5364] hover:bg-gradient-to-r hover:from-[#0f2027] hover:via-[#203a43] hover:to-[#2c5364] hover:text-white transition-all duration-200;
+  }
+}
+

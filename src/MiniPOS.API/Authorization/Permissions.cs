@@ -54,6 +54,14 @@ namespace MiniPOS.API.Authorization
             public const string Delete = "Products.Delete";
         }
 
+        public static class Orders
+        {
+            public const string View = "Orders.View";
+            public const string Create = "Orders.Create";
+            public const string Update = "Orders.Update";
+            public const string Delete = "Orders.Delete";
+        }
+
         public static IEnumerable<string> GetAllPermissions()
         {
             return new[]
@@ -89,6 +97,11 @@ namespace MiniPOS.API.Authorization
                 Products.Update,
                 Products.Delete,
                 Products.ViewPage,
+
+                Orders.View,
+                Orders.Create,
+                Orders.Update,
+                Orders.Delete
 
             };
         }

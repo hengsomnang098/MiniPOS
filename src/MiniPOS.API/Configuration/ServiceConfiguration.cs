@@ -36,6 +36,8 @@ namespace MiniPOS.API.Configuration
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<IServiceRepository, ServiceRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<IOrderRepository, OrderRepository>();
+
 
             // 🪄 BunnyCDN Configuration
             services.Configure<BunnyCdnOptions>(configuration.GetSection("BunnyCdn"));

@@ -6,6 +6,7 @@ using MiniPOS.API.Application.DTOs.Shop;
 using MiniPOS.API.Application.DTOs.ShopUser;
 using MiniPOS.API.Application.DTOs.User;
 using MiniPOS.API.Application.DTOs.Product;
+using MiniPOS.API.Application.DTOs.Order;
 using MiniPOS.API.Domain;
 
 namespace MiniPOS.API.Application
@@ -104,6 +105,43 @@ namespace MiniPOS.API.Application
 
             // ⚙️ Permission Mappings
             CreateMap<Permission, PermissionDto>();
+
+            // 🧾 Order Mappings
+            CreateMap<OrderItem, OrderItemDto>()
+                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product != null ? src.Product.Name : string.Empty))
+                .ForMember(dest => dest.SubTotal, opt => opt.MapFrom(src => src.Quantity * src.UnitPrice));
+
+            CreateMap<Order, OrderDto>()
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items));
+
+            // 🧾 Order Mappings
+            CreateMap<OrderItem, OrderItemDto>()
+                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product != null ? src.Product.Name : string.Empty))
+                .ForMember(dest => dest.SubTotal, opt => opt.MapFrom(src => src.Quantity * src.UnitPrice));
+
+            CreateMap<Order, OrderDto>()
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items))
+                .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+                .ForMember(dest => dest.FinalAmount, opt => opt.MapFrom(src => src.FinalAmount))
+                .ForMember(dest => dest.Discount, opt => opt.MapFrom(src => src.Discount))
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status ?? "Pending"))
+                .ForMember(dest => dest.OrderDate, opt => opt.MapFrom(src => src.OrderDate));
+
+            CreateMap<OrderItemCreateDto, OrderItem>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.UnitPrice, opt => opt.Ignore()) // set in repo from Product.Price
+                .ForMember(dest => dest.OrderId, opt => opt.Ignore())
+                .ForMember(dest => dest.Order, opt => opt.Ignore())
+                .ForMember(dest => dest.Product, opt => opt.Ignore());
+
+            CreateMap<OrderCreateDto, Order>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.TotalAmount, opt => opt.Ignore())
+                .ForMember(dest => dest.FinalAmount, opt => opt.Ignore())
+                .ForMember(dest => dest.OrderDate, opt => opt.Ignore())
+                .ForMember(dest => dest.Status, opt => opt.Ignore())
+                .ForMember(dest => dest.Items, opt => opt.Ignore());
+
         }
     }
 }

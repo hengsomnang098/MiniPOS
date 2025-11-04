@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MiniPOS.API.Domain.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251102093107_InitTable")]
+    [Migration("20251104143035_InitTable")]
     partial class InitTable
     {
         /// <inheritdoc />
@@ -268,6 +268,81 @@ namespace MiniPOS.API.Domain.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("MiniPOS.API.Domain.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Discount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("FinalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ShopId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ShopId");
+
+                    b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("MiniPOS.API.Domain.OrderItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("OrderItems");
+                });
+
             modelBuilder.Entity("MiniPOS.API.Domain.Permission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -297,6 +372,9 @@ namespace MiniPOS.API.Domain.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Barcode")
+                        .HasColumnType("text");
+
                     b.Property<decimal>("CostPrice")
                         .HasColumnType("numeric");
 
@@ -324,12 +402,19 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Property<Guid?>("ServiceId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("ShopId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ServiceId");
+
+                    b.HasIndex("ShopId", "Barcode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Product_ShopId_Barcode");
 
                     b.ToTable("Products");
                 });
@@ -499,6 +584,43 @@ namespace MiniPOS.API.Domain.Migrations
                     b.Navigation("Shop");
                 });
 
+            modelBuilder.Entity("MiniPOS.API.Domain.Order", b =>
+                {
+                    b.HasOne("MiniPOS.API.Domain.ApplicationUser", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MiniPOS.API.Domain.Shop", "Shop")
+                        .WithMany()
+                        .HasForeignKey("ShopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Shop");
+                });
+
+            modelBuilder.Entity("MiniPOS.API.Domain.OrderItem", b =>
+                {
+                    b.HasOne("MiniPOS.API.Domain.Order", "Order")
+                        .WithMany("Items")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MiniPOS.API.Domain.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("MiniPOS.API.Domain.Product", b =>
                 {
                     b.HasOne("MiniPOS.API.Domain.Service", "Service")
@@ -506,7 +628,15 @@ namespace MiniPOS.API.Domain.Migrations
                         .HasForeignKey("ServiceId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("MiniPOS.API.Domain.Shop", "Shop")
+                        .WithMany()
+                        .HasForeignKey("ShopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Service");
+
+                    b.Navigation("Shop");
                 });
 
             modelBuilder.Entity("MiniPOS.API.Domain.RolePermission", b =>
@@ -586,6 +716,11 @@ namespace MiniPOS.API.Domain.Migrations
             modelBuilder.Entity("MiniPOS.API.Domain.Category", b =>
                 {
                     b.Navigation("Services");
+                });
+
+            modelBuilder.Entity("MiniPOS.API.Domain.Order", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("MiniPOS.API.Domain.Permission", b =>

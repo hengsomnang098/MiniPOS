@@ -50,7 +50,7 @@ export function DataTable<T extends { id?: string | number }>({
                                 <TableHead
                                     key={col.key as string}
                                     className={cn(
-                                        "text-sm font-semibold uppercase tracking-wide py-3 border-b border-blue-400/40",
+                                        "text-sm font-semibold uppercase tracking-wide py-3 border-b border-blue-400/40 text-center",
                                         col.align === "center"
                                             ? "text-center"
                                             : col.align === "right"

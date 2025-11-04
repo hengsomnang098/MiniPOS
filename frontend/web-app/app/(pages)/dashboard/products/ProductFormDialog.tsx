@@ -11,7 +11,7 @@ import { Product } from "@/types/product";
 import { FormImage } from "@/components/form/FormImage";
 import { FormSelect } from "@/components/form/FormSelect";
 import { getAllCategories } from "@/app/actions/categoryAction";
-import { getServices } from "@/app/actions/servicesAction";
+import { getServicesByCategory } from "@/app/actions/servicesAction";
 import { Categories } from "@/types/category";
 import { Services } from "@/types/service";
 
@@ -46,6 +46,7 @@ export function ProductFormDialog({
         defaultValues: {
             name: product?.name || "",
             description: product?.description || "",
+            barcode: product?.barcode || "",
             price: product?.price || 0,
             costPrice: product?.costPrice || 0,
             quantity: product?.quantity || 0,
@@ -58,12 +59,11 @@ export function ProductFormDialog({
     const [imagePreview, setImagePreview] = useState<string | null>(
         product?.imageUrl || null
     );
-
     const [categories, setCategories] = useState<Categories[]>([]);
-    const [services, setServices] = useState<Services[]>([]);
+    const [services, setServices] = useState<Array<Pick<Services, "id" | "name">>>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>("");
 
-    // 🧭 Load categories on open
+    // 🧭 Load categories on dialog open
     useEffect(() => {
         if (open && shopId) {
             getAllCategories(shopId)
@@ -74,36 +74,39 @@ export function ProductFormDialog({
                         setSelectedCategory(product.categoryId);
                     }
                 })
-                .catch((e) => console.error("Load categories failed", e));
+                .catch((e) => console.error("❌ Load categories failed:", e));
         }
     }, [open, shopId, product?.categoryId]);
 
-    // 🧭 Load services when category changes
+    // 🧭 Load services only when a category is selected
     useEffect(() => {
-        if (!selectedCategory) return;
+        if (!selectedCategory) {
+            setServices([]);
+            return;
+        }
+
         const fetchServices = async () => {
             try {
-                const result = await getServices(`categoryId=${selectedCategory}`, shopId);
-                setServices(result.items || []);
+                // ✅ Fetch services belonging to the selected category
+                const result = await getServicesByCategory(selectedCategory);
+                // The API returns a minimal shape: [{ id, name }]
+                if (Array.isArray(result)) setServices(result);
+                else setServices([]);
             } catch (err) {
-                console.error("Fetch services failed", err);
+                console.error("❌ Fetch services failed:", err);
+                setServices([]);
             }
         };
+
         fetchServices();
     }, [selectedCategory, shopId]);
 
-    // 🧭 When opening in edit mode, ensure category is selected so services load
-    useEffect(() => {
-        if (open && isEditing && product?.categoryId) {
-            setSelectedCategory(product.categoryId);
-        }
-    }, [open, isEditing, product?.categoryId]);
-
-    // 🧼 Reset form when dialog opens
+    // 🧼 Reset form when opening
     useEffect(() => {
         reset({
             name: product?.name || "",
             description: product?.description || "",
+            barcode: product?.barcode || "",
             price: product?.price || 0,
             costPrice: product?.costPrice || 0,
             quantity: product?.quantity || 0,
@@ -112,7 +115,6 @@ export function ProductFormDialog({
         });
         setImagePreview(product?.imageUrl || null);
         setSelectedFile(null);
-        // Preselect category when editing
         setSelectedCategory(product?.categoryId || "");
         if (open) setFocus("name");
     }, [open, product, reset, setFocus]);
@@ -121,16 +123,17 @@ export function ProductFormDialog({
     const onSubmitForm = useCallback(
         async (data: Partial<Product>) => {
             const formData = new FormData();
-            formData.append("Name", data.name || ""); // ✅ match DTO casing
+            formData.append("Name", data.name || "");
             formData.append("Description", data.description || "");
+            formData.append("Barcode", data.barcode || "");
             formData.append("Price", String(data.price ?? 0));
             formData.append("CostPrice", String(data.costPrice ?? 0));
             formData.append("Quantity", String(data.quantity ?? 0));
-            formData.append("ServiceId", data.serviceId || ""); // ✅ GUID value required
+            formData.append("ServiceId", data.serviceId || "");
             formData.append("IsActive", String(data.isActive ?? true));
 
             if (selectedFile) {
-                formData.append("ImageUrl", selectedFile); // ✅ match DTO property name
+                formData.append("ImageUrl", selectedFile);
             }
 
             console.group("🧾 Product Form Data Preview");
@@ -145,7 +148,6 @@ export function ProductFormDialog({
         },
         [onSubmit, reset, setOpen, selectedFile]
     );
-
 
     const requiredPermission = isEditing ? "Products.Update" : "Products.Create";
     if (!hasPermission(requiredPermission)) return null;
@@ -183,6 +185,20 @@ export function ProductFormDialog({
                         )}
                     />
 
+                    <Controller
+                        name="barcode"
+                        control={control}
+                        render={({ field }) => (
+                            <FormInput
+                                id="barcode"
+                                label="Barcode (optional)"
+                                placeholder="e.g., 8851234567890"
+                                register={field}
+                                error={errors.barcode as any}
+                            />
+                        )}
+                    />
+
                     {/* Category Select */}
                     <FormSelect
                         id="category"
@@ -192,7 +208,6 @@ export function ProductFormDialog({
                         onChange={(value: string) => {
                             setSelectedCategory(value);
                             setServices([]);
-                            // Clear any previously selected service when category changes
                             setValue("serviceId", "", { shouldDirty: true, shouldValidate: true });
                         }}
                         options={categories.map((cat) => ({
@@ -201,7 +216,7 @@ export function ProductFormDialog({
                         }))}
                     />
 
-                    {/* Service Select */}
+                    {/* Service Select (depends on category) */}
                     <Controller
                         name="serviceId"
                         control={control}
@@ -210,13 +225,17 @@ export function ProductFormDialog({
                             <FormSelect
                                 id="serviceId"
                                 label="Service"
-                                placeholder="Select service"
+                                placeholder={selectedCategory ? "Select service" : "Select a category first"}
                                 value={field.value}
                                 onChange={(value: string) => field.onChange(value)}
-                                options={services.map((svc) => ({
-                                    label: svc.name,
-                                    value: svc.id, // ✅ send serviceId
-                                }))}
+                                options={
+                                    selectedCategory
+                                        ? services.map((svc) => ({
+                                            label: svc.name,
+                                            value: svc.id,
+                                        }))
+                                        : []
+                                }
                                 disabled={!selectedCategory || services.length === 0}
                                 error={errors.serviceId}
                             />

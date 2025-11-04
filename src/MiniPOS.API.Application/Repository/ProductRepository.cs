@@ -47,8 +47,32 @@ namespace MiniPOS.API.Application.Repository
             return Result<ProductDto>.Success(dto);
         }
 
-        // ➕ Create Product
-        // ➕ Create Product
+        // 🔎 Get product by Barcode within a Shop scope
+        public async Task<Result<ProductDto>> GetByBarcodeAsync(Guid shopId, string barcode)
+        {
+            if (string.IsNullOrWhiteSpace(barcode))
+                return Result<ProductDto>.Failure(new Error(ErrorCodes.BadRequest, "Barcode is required."));
+
+            var normalized = barcode.Trim();
+
+            var product = await _context.Products
+                .Include(p => p.Service)
+                    .ThenInclude(s => s.Category)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Barcode == normalized && p.ShopId == shopId);
+
+            if (product == null)
+                return Result<ProductDto>.Failure(new Error(ErrorCodes.NotFound, "Product not found for this barcode."));
+
+            var dto = _mapper.Map<ProductDto>(product);
+            dto.ServiceName = product.Service?.Name;
+            dto.CategoryName = product.Service?.Category?.CategoryName;
+            dto.CategoryId = product.Service?.Category?.Id;
+
+            return Result<ProductDto>.Success(dto);
+        }
+
+    // ➕ Create Product
         public async Task<Result<ProductDto>> CreateAsync(ProductCreateDto dto)
         {
             // 🧾 Log all incoming data from frontend
@@ -69,6 +93,34 @@ namespace MiniPOS.API.Application.Repository
             var product = _mapper.Map<Product>(dto);
             product.CreatedAt = DateTime.UtcNow;
 
+            // Normalize barcode (optional field)
+            if (!string.IsNullOrWhiteSpace(product.Barcode))
+                product.Barcode = product.Barcode.Trim();
+
+            // Resolve ShopId from Service -> Category -> Shop
+            var shopId = await _context.Services
+                .Where(s => s.Id == dto.ServiceId)
+                .Select(s => s.Category.ShopId)
+                .FirstOrDefaultAsync();
+
+            if (shopId == Guid.Empty)
+            {
+                _logger.LogWarning("⚠️ ShopId could not be resolved from ServiceId: {ServiceId}", dto.ServiceId);
+                return Result<ProductDto>.Failure(new Error(ErrorCodes.NotFound, "Shop not found for the provided ServiceId."));
+            }
+
+            product.ShopId = shopId;
+
+            // Pre-check uniqueness to avoid orphaning uploaded images
+            if (!string.IsNullOrWhiteSpace(product.Barcode))
+            {
+                var exists = await _context.Products.AnyAsync(p => p.ShopId == shopId && p.Barcode == product.Barcode);
+                if (exists)
+                {
+                    return Result<ProductDto>.Failure(new Error(ErrorCodes.Conflict, "Barcode already exists in this shop."));
+                }
+            }
+
             // ✅ Handle BunnyCDN Image Upload (if present)
             if (dto.ImageUrl != null && dto.ImageUrl.Length > 0)
             {
@@ -78,7 +130,20 @@ namespace MiniPOS.API.Application.Repository
             }
 
             _context.Products.Add(product);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                // Handle unique constraint on Barcode
+                if (ex.InnerException?.Message?.Contains("IX_Product_ShopId_Barcode") == true || ex.Message.Contains("IX_Product_ShopId_Barcode")
+                    || ex.InnerException?.Message?.Contains("IX_Product_Barcode") == true || ex.Message.Contains("IX_Product_Barcode"))
+                {
+                    return Result<ProductDto>.Failure(new Error(ErrorCodes.Conflict, "Barcode already exists in this shop."));
+                }
+                throw;
+            }
 
             _logger.LogInformation("✅ Product created successfully with Id: {ProductId}", product.Id);
 
@@ -96,8 +161,35 @@ namespace MiniPOS.API.Application.Repository
             if (product == null)
                 return Result<ProductDto>.Failure(new Error(ErrorCodes.NotFound, "Product not found."));
 
+            // Map incoming changes (excluding barcode normalization and shop/service resolution)
             _mapper.Map(dto, product);
             product.UpdatedAt = DateTime.UtcNow;
+
+            // Normalize barcode
+            if (!string.IsNullOrWhiteSpace(product.Barcode))
+                product.Barcode = product.Barcode.Trim();
+
+            // Re-resolve ShopId in case Service changed
+            var newShopId = await _context.Services
+                .Where(s => s.Id == product.ServiceId)
+                .Select(s => s.Category.ShopId)
+                .FirstOrDefaultAsync();
+
+            if (newShopId == Guid.Empty)
+            {
+                return Result<ProductDto>.Failure(new Error(ErrorCodes.NotFound, "Shop not found for the provided ServiceId."));
+            }
+            product.ShopId = newShopId;
+
+            // Pre-check uniqueness when barcode is provided
+            if (!string.IsNullOrWhiteSpace(product.Barcode))
+            {
+                var exists = await _context.Products.AnyAsync(p => p.Id != id && p.ShopId == newShopId && p.Barcode == product.Barcode);
+                if (exists)
+                {
+                    return Result<ProductDto>.Failure(new Error(ErrorCodes.Conflict, "Barcode already exists in this shop."));
+                }
+            }
 
             // ✅ If new image is uploaded → upload to BunnyCDN and delete old one
             if (dto.ImageUrl != null && dto.ImageUrl.Length > 0)
@@ -110,7 +202,19 @@ namespace MiniPOS.API.Application.Repository
             }
 
             _context.Products.Update(product);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException?.Message?.Contains("IX_Product_ShopId_Barcode") == true || ex.Message.Contains("IX_Product_ShopId_Barcode")
+                    || ex.InnerException?.Message?.Contains("IX_Product_Barcode") == true || ex.Message.Contains("IX_Product_Barcode"))
+                {
+                    return Result<ProductDto>.Failure(new Error(ErrorCodes.Conflict, "Barcode already exists in this shop."));
+                }
+                throw;
+            }
 
             var resultDto = _mapper.Map<ProductDto>(product);
             resultDto.ServiceName = (await _context.Services.FindAsync(dto.ServiceId))?.Name;
@@ -135,7 +239,7 @@ namespace MiniPOS.API.Application.Repository
             return Result<bool>.Success(true);
         }
 
-        public async Task<PaginatedResult<ProductDto>> GetPagedAsync(Guid shopId, int pageNumber = 1, int pageSize = 10, string search = null)
+        public async Task<PaginatedResult<ProductDto>> GetPagedAsync(Guid shopId, int pageNumber = 1, int pageSize = 10, string search = null, Guid? categoryId = null)
         {
             pageNumber = Math.Max(1, pageNumber);
             pageSize = Math.Clamp(pageSize, 1, 100);
@@ -143,8 +247,13 @@ namespace MiniPOS.API.Application.Repository
             var query = _context.Products
                 .Include(p => p.Service)
                     .ThenInclude(s => s.Category)
-                .Where(p => p.Service.Category.ShopId == shopId)
+                .Where(p => p.ShopId == shopId)
                 .AsNoTracking();
+
+            if (categoryId.HasValue && categoryId.Value != Guid.Empty)
+            {
+                query = query.Where(p => p.Service.CategoryId == categoryId.Value);
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -152,7 +261,8 @@ namespace MiniPOS.API.Application.Repository
                 query = query.Where(p =>
                     p.Name.ToLower().Contains(normalized) ||
                     p.Service.Name.ToLower().Contains(normalized) ||
-                    p.Service.Category.CategoryName.ToLower().Contains(normalized)
+                    p.Service.Category.CategoryName.ToLower().Contains(normalized) ||
+                    (p.Barcode != null && p.Barcode.ToLower().Contains(normalized))
                 );
             }
 

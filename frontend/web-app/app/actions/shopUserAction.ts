@@ -55,7 +55,6 @@ export async function getShopUser(query: string, shopId: string): Promise<PageRe
 export async function getShopByUser(userId: string) {
     try {
         const res = await FetchWrapper.get(`${baseUrl}/user/${userId}`);
-        console.log(res);
         return res;
     } catch (error) {
         console.error("Get shop by user error:", error);

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using MiniPOS.API.Application.Contracts;
 using MiniPOS.API.Application.Config;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
 
 namespace MiniPOS.API.Application.Repository
@@ -12,6 +12,7 @@ namespace MiniPOS.API.Application.Repository
     {
         private readonly HttpClient _httpClient;
         private readonly BunnyCdnOptions _options;
+        private const long MaxFileSizeBytes = 5 * 1024 * 1024; // 5 MB
 
         public BunnyCdnService(HttpClient httpClient, BunnyCdnOptions options)
         {
@@ -21,17 +22,20 @@ namespace MiniPOS.API.Application.Repository
 
         public async Task<string> UploadToBunnyCdnAsync(IFormFile file, string folder = "uploads")
         {
-            // Generate unique file name
-            var fileExtension = Path.GetExtension(file.FileName);
-            var fileName = $"{Guid.NewGuid()}{fileExtension}";
+            // 🔒 Enforce 5 MB limit
+            if (file.Length > MaxFileSizeBytes)
+                throw new InvalidOperationException("File exceeds the maximum allowed size of 5 MB.");
+
+            // 🔠 Always save as .webp
+            var fileName = $"{Guid.NewGuid()}.webp";
             var uploadUrl = $"{_options.RegionUrl}/{_options.StorageZoneName}/{folder}/{fileName}";
 
-            // Check if file is an image for optimization
+            // 🖼️ Check if file is an image
             if (file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
             {
                 using var image = await Image.LoadAsync(file.OpenReadStream());
 
-                // Resize if width exceeds 1920px (maintains aspect ratio)
+                // 📏 Resize if width > 1920 px (keep aspect ratio)
                 const int maxWidth = 1920;
                 if (image.Width > maxWidth)
                 {
@@ -40,17 +44,22 @@ namespace MiniPOS.API.Application.Repository
                     image.Mutate(x => x.Resize(maxWidth, newHeight));
                 }
 
-                // Compress to JPEG (you can tune quality)
-                var encoder = new JpegEncoder { Quality = 80 };
+                // 💾 Save as WebP (you can tweak quality)
+                var encoder = new WebpEncoder
+                {
+                    Quality = 80, // good balance between size and quality
+                    FileFormat = WebpFileFormatType.Lossy
+                };
 
                 await using var memoryStream = new MemoryStream();
                 await image.SaveAsync(memoryStream, encoder);
                 memoryStream.Position = 0;
 
+                // 📤 Upload to Bunny CDN
                 var request = new HttpRequestMessage(HttpMethod.Put, uploadUrl);
                 request.Headers.Add("AccessKey", _options.AccessKey);
                 request.Content = new StreamContent(memoryStream);
-                request.Content.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+                request.Content.Headers.ContentType = new MediaTypeHeaderValue("image/webp");
 
                 var response = await _httpClient.SendAsync(request);
                 response.EnsureSuccessStatusCode();
@@ -59,8 +68,9 @@ namespace MiniPOS.API.Application.Repository
             }
             else
             {
-                // Not an image → upload as-is
+                // Non-image upload → still enforce 5MB
                 using var fileStream = file.OpenReadStream();
+
                 var request = new HttpRequestMessage(HttpMethod.Put, uploadUrl);
                 request.Headers.Add("AccessKey", _options.AccessKey);
                 request.Content = new StreamContent(fileStream);

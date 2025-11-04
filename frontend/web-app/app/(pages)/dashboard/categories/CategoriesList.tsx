@@ -218,7 +218,7 @@ async function handlePageChange(newPage: number) {
                                 <PermissionButton
                                     size="sm"
                                     variant="outline"
-                                    permission="Roles.Update"
+                                    permission="Categories.Update"
                                     className="bg-yellow-500 hover:bg-yellow-300"
                                     onClick={() => {
                                         setEditingCategory(category);
@@ -233,7 +233,7 @@ async function handlePageChange(newPage: number) {
                                         <PermissionButton
                                             size="sm"
                                             variant="destructive"
-                                            permission="Roles.Delete"
+                                            permission="Categories.Delete"
                                         >
                                             Delete
                                         </PermissionButton>

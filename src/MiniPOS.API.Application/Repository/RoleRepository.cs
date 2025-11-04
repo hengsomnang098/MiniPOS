@@ -20,8 +20,6 @@ namespace MiniPOS.API.Application.Services
         private readonly ILogger<RoleRepository> _logger;
         private readonly RoleManager<ApplicationRole> _roleManager;
 
-        private const string RolesCacheKey = "all_roles";
-        private const string PermissionsCacheKey = "all_permissions";
 
         public RoleRepository(
             ApplicationDbContext context,
@@ -40,11 +38,6 @@ namespace MiniPOS.API.Application.Services
         // ✅ Get all roles (cached, no heavy includes)
         public async Task<Result<List<GetRoleDto>>> GetAllAsync()
         {
-            if (_cache.TryGetValue(RolesCacheKey, out List<GetRoleDto> cachedRoles))
-            {
-                _logger.LogInformation("CACHE HIT: Roles fetched from memory cache");
-                return Result<List<GetRoleDto>>.Success(cachedRoles);
-            }
 
             _logger.LogInformation("CACHE MISS: Roles fetched from database");
 
@@ -54,10 +47,6 @@ namespace MiniPOS.API.Application.Services
                 .ProjectTo<GetRoleDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();
 
-            _cache.Set(RolesCacheKey, roles, new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
-            });
 
             return Result<List<GetRoleDto>>.Success(roles);
         }
@@ -65,15 +54,6 @@ namespace MiniPOS.API.Application.Services
         // ✅ Get role by ID (loads permissions)
         public async Task<Result<GetRoleDto>> GetByIdAsync(Guid id)
         {
-            if (_cache.TryGetValue(RolesCacheKey, out List<GetRoleDto> cachedRoles))
-            {
-                var cachedRole = cachedRoles.FirstOrDefault(r => r.Id == id);
-                if (cachedRole != null)
-                {
-                    _logger.LogInformation("CACHE HIT: Role {RoleId} fetched from memory cache", id);
-                    return Result<GetRoleDto>.Success(cachedRole);
-                }
-            }
 
             _logger.LogInformation("CACHE MISS: Role {RoleId} fetched from database", id);
 
@@ -119,8 +99,6 @@ namespace MiniPOS.API.Application.Services
                 await _context.RolePermissions.AddRangeAsync(rolePermissions);
                 await _context.SaveChangesAsync();
 
-                // ✅ Invalidate cache
-                _cache.Remove(RolesCacheKey);
                 _logger.LogInformation("CACHE INVALIDATE: Roles cache cleared after new role created");
 
                 var roleWithPermissions = await _context.Roles
@@ -179,8 +157,6 @@ namespace MiniPOS.API.Application.Services
 
                 await _context.RolePermissions.AddRangeAsync(newPermissions);
                 await _context.SaveChangesAsync();
-
-                _cache.Remove(RolesCacheKey);
                 _logger.LogInformation("CACHE INVALIDATE: Roles cache cleared after role update");
 
                 var updatedRole = await _context.Roles
@@ -217,8 +193,6 @@ namespace MiniPOS.API.Application.Services
 
                 _context.Roles.Remove(role);
                 await _context.SaveChangesAsync();
-
-                _cache.Remove(RolesCacheKey);
                 _logger.LogInformation("CACHE INVALIDATE: Roles cache cleared after role deletion");
 
                 return Result<bool>.Success(true);
@@ -235,11 +209,6 @@ namespace MiniPOS.API.Application.Services
         {
             try
             {
-                if (_cache.TryGetValue(PermissionsCacheKey, out List<PermissionDto> cachedPermissions))
-                {
-                    _logger.LogInformation("CACHE HIT: Permissions fetched from memory cache");
-                    return Result<List<PermissionDto>>.Success(cachedPermissions);
-                }
 
                 _logger.LogInformation("CACHE MISS: Permissions fetched from database");
 
@@ -248,8 +217,6 @@ namespace MiniPOS.API.Application.Services
                     .ProjectTo<PermissionDto>(_mapper.ConfigurationProvider)
                     .OrderBy(p => p.Name)
                     .ToListAsync();
-
-                _cache.Set(PermissionsCacheKey, permissions, TimeSpan.FromMinutes(30));
 
                 return Result<List<PermissionDto>>.Success(permissions);
             }

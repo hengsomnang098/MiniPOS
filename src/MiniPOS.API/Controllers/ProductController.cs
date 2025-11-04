@@ -68,9 +68,10 @@ namespace MiniPOS.API.Controllers
             [FromQuery] Guid shopId,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
-            [FromQuery] string search = null)
+            [FromQuery] string search = null,
+            [FromQuery] Guid? categoryId = null)
         {
-            var result = await _productRepository.GetPagedAsync(shopId, pageNumber, pageSize, search);
+            var result = await _productRepository.GetPagedAsync(shopId, pageNumber, pageSize, search, categoryId);
             return Ok(result);
         }
 
@@ -80,6 +81,15 @@ namespace MiniPOS.API.Controllers
         public async Task<ActionResult<ProductDto>> GetById(Guid id)
         {
             var result = await _productRepository.GetByIdAsync(id);
+            return ToActionResult(result);
+        }
+
+        // 📦 GET: /api/Product/by-barcode/{barcode}?shopId={shopId}
+        [HttpGet("by-barcode/{barcode}")]
+        [HasPermission(Permissions.Products.View)]
+        public async Task<ActionResult<ProductDto>> GetByBarcode([FromRoute] string barcode, [FromQuery] Guid shopId)
+        {
+            var result = await _productRepository.GetByBarcodeAsync(shopId, barcode);
             return ToActionResult(result);
         }
     }

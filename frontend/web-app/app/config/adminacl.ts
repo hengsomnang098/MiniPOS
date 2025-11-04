@@ -23,14 +23,27 @@ export interface SidebarGroup {
 
 export const sidebarGroups: SidebarGroup[] = [
     {
-        title:"Select Shop",
-        items:[
-           {
+        title: "Select Shop",
+        items: [
+            {
+                title: "POS",
+                href: "/dashboard/pos",
+                icon: Package, // 🧾 POS for ordering
+                permission: "Orders.View",
+            },
+            {
+                title: "Dashboard",
+                href: "/dashboard/",
+                icon: Package, // 🧾 POS for ordering
+                permission: "Orders.View",
+            },
+            {
                 title: "Select Shop",
                 href: "/",
                 icon: Tags, // 🏷️ tags are intuitive for categories
                 permission: "Shops.View",
             },
+
         ]
     },
     {
@@ -54,6 +67,7 @@ export const sidebarGroups: SidebarGroup[] = [
                 icon: Package, // 📦 product/package icon for product management
                 permission: "Products.View",
             },
+
         ],
     },
     {

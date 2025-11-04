@@ -203,12 +203,14 @@ export default function ProductsList({ initialProducts, shopId }: ProductsListPr
             label: "Image",
             render: (product) => (
               <Image
-                src={product.imageUrl || "/images/placeholder.png"}
+                src={product.imageUrl || "/Images/placeholder.png"}
                 alt={product.name || "Product"}
                 width={90}
                 height={90}
                 className="object-cover rounded-md border"
-                priority
+                loading="lazy"
+                placeholder="blur"
+                blurDataURL="/images/placeholder.png"
               />
             ),
           },
@@ -218,8 +220,8 @@ export default function ProductsList({ initialProducts, shopId }: ProductsListPr
             render: (product) => (
               <span
                 className={`px-2 py-1 text-xs rounded ${product.isActive
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-600"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-600"
                   }`}
               >
                 {product.isActive ? "Active" : "Inactive"}
