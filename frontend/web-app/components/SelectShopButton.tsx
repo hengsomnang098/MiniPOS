@@ -14,5 +14,7 @@ export default function SelectShopButton({ shopId }: { shopId: string }) {
     router.push(`dashboard`);
   };
 
-  return <Button onClick={handleSelect}>Open Shop</Button>;
+  return <Button
+    className="w-full group/btn bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-0 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300"
+    onClick={handleSelect}>Open Shop</Button>;
 }

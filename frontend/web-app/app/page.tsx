@@ -66,9 +66,9 @@ export default async function Home() {
                   <Settings className="w-7 h-7 text-cyan-300" />
                 </div>
                 <CardTitle className="text-xl text-white font-semibold">Admin Dashboard</CardTitle>
-                <CardDescription className="text-cyan-100/60 leading-relaxed">
+                {/* <CardDescription className="text-cyan-100/60 leading-relaxed">
                   Manage system-wide settings and oversee all shops.
-                </CardDescription>
+                </CardDescription> */}
               </CardHeader>
 
               <CardContent className="relative">

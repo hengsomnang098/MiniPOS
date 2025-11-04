@@ -1,0 +1,21 @@
+# Global ignores to keep Docker build contexts small
+.git
+.gitignore
+.DS_Store
+
+# Node/Next.js artifacts
+**/node_modules
+**/.next
+
+# .NET build artifacts
+**/bin
+**/obj
+
+# Logs and temp files
+**/logs
+**/*.log
+**/tmp
+
+# Local env files (don't bake secrets into images)
+**/.env
+**/.env.*

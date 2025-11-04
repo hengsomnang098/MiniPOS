@@ -75,8 +75,6 @@ namespace MiniPOS.API.Application.Repository
     // ➕ Create Product
         public async Task<Result<ProductDto>> CreateAsync(ProductCreateDto dto)
         {
-            // 🧾 Log all incoming data from frontend
-            _logger.LogInformation("📦 Creating product with data: {@Dto}", dto);
 
             if (dto == null)
             {

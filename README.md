@@ -100,12 +100,13 @@ The solution uses the following key NuGet packages:
 - `Swashbuckle.AspNetCore` (6.5.0) - Swagger/OpenAPI documentation
 
 ## Recommended Improvements
-`
+
 - Add `src/MiniPOS.API/Dockerfile` and extend `docker-compose.yml` for full containerization
 - Add a `.gitignore` to exclude `bin/`, `obj/`, user secrets, and local logs
 - Commit EF Core migrations for easier deployment and development
 - Add a `tests/` project (example: `MiniPOS.Tests`) with unit tests
 - Add helper scripts (`scripts/dev-up.sh`) or a `Makefile` for common tasks
+
 
 
 ## Prerequisites
@@ -146,7 +147,7 @@ dotnet sln add src/MiniPOS.API.Application/MiniPOS.API.Application.csproj
 dotnet sln add src/MiniPOS.API.Common/MiniPOS.API.Common.csproj
 ```
 
-2. Add project references:
+1. Add project references:
 
 ```bash
 # API project dependencies
@@ -161,7 +162,7 @@ dotnet add reference ../MiniPOS.API.Domain/MiniPOS.API.Domain.csproj
 dotnet add reference ../MiniPOS.API.Common/MiniPOS.API.Common.csproj
 ```
 
-3. Install required NuGet packages:
+1. Install required NuGet packages:
 
 ```bash
 # Domain project packages
@@ -184,7 +185,7 @@ dotnet add package Serilog.Sinks.Console --version 6.0.0
 dotnet add package Swashbuckle.AspNetCore --version 6.5.0
 ```
 
-4. Create the project structure:
+1. Create the project structure:
 
 ```bash
 # Create directory structure in API project
@@ -202,7 +203,7 @@ cd ../MiniPOS.API.Common
 mkdir Constants Results
 ```
 
-5. Set up Docker for PostgreSQL:
+1. Set up Docker for PostgreSQL:
 
 Create a `docker-compose.yml` file in the root directory:
 
@@ -224,7 +225,7 @@ volumes:
   postgres_data:
 ```
 
-6. Initialize the database:
+1. Initialize the database:
 
 ```bash
 # Start PostgreSQL
@@ -338,30 +339,48 @@ If the port differs, check the console output for the exact listening URLs.
 - If you see a port conflict, check other processes using `lsof -i :5000` or change the app URL via `ASPNETCORE_URLS` environment variable or launch settings in `src/MiniPOS.API/Properties/launchSettings.json`.
 - To view logs produced by Serilog file sink, check the `logs` directory under `src/MiniPOS.API`.
 
-## Running with Docker (app + db)
+## Run the full stack with Docker
 
-This project includes `docker-compose.yml` only for PostgreSQL. If you want to containerize the API too, add a Dockerfile to `src/MiniPOS.API` and extend the compose file. Example minimal steps:
+The repository now includes a complete Docker setup for:
 
-1. Add `src/MiniPOS.API/Dockerfile` (example):
+- API (ASP.NET Core 9)
+- Web (Next.js 15, output=standalone)
+- PostgreSQL
 
-   ```dockerfile
-   FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-   WORKDIR /app
-   EXPOSE 80
+Key files:
 
-   FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-   WORKDIR /src
-   COPY . .
-   RUN dotnet restore "src/MiniPOS.API/MiniPOS.API.csproj"
-   RUN dotnet publish "src/MiniPOS.API/MiniPOS.API.csproj" -c Release -o /app/publish
+- `src/MiniPOS.API/Dockerfile` — multi-stage build for the API
+- `frontend/web-app/Dockerfile` — multi-stage build for the Next.js app (standalone output)
+- `docker-compose.yml` — orchestrates `api`, `web`, and `postgres`
 
-   FROM base AS final
-   WORKDIR /app
-   COPY --from=build /app/publish .
-   ENTRYPOINT ["dotnet", "MiniPOS.API.dll"]
-   ```
+Quick start (from repo root):
 
-2. Extend `docker-compose.yml` to build and run the API alongside Postgres.
+```bash
+# Build images
+docker compose build
+
+# Start containers
+docker compose up -d
+
+# Open apps
+# API Swagger:   http://localhost:7001/swagger
+# Web frontend:  http://localhost:3000
+```
+
+Notes:
+
+- The API listens on container port 8080 and is published to host `7001`.
+- The web app gets `NEXT_PUBLIC_API_URL=http://api:8080` inside the Docker network to call the API service.
+- PostgreSQL uses password `postgrespw` and stores data in a named volume `postgres-data`.
+- For local development (outside Docker), the frontend reads `NEXT_PUBLIC_API_URL` from `.env`.
+
+Troubleshooting the web build:
+
+- If you see "&lt;Html&gt; should not be imported outside of pages/_document." only when building in Docker (but local `npm run build` succeeds), ensure the Dockerfile builds with `NODE_ENV=production` and still installs devDependencies. A working pattern is:
+      - Keep `ENV NODE_ENV=production` in all stages.
+      - Run `npm ci --include=dev` in the deps stage so TypeScript and other dev tooling are available at build time.
+      - Avoid setting `NODE_ENV=development` during `next build` as it can trigger inconsistent behavior.
+- If you really have an `import { Html } from "next/document"` somewhere in your source, remove it (App Router) or move it into `pages/_document.tsx` (Pages Router).
 
 ## Security notes
 
@@ -403,36 +422,36 @@ dotnet ef database update --project src/MiniPOS.API --startup-project src/MiniPO
 
 All projects target `net9.0`. Below are the PackageReference entries taken from each project file.
 
- - `src/MiniPOS.API/MiniPOS.API.csproj`
-  - AutoMapper (12.0.1)
-  - AutoMapper.Extensions.Microsoft.DependencyInjection (12.0.1)
-  - Microsoft.AspNetCore.Authentication.JwtBearer (9.0.10)
-  - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.10)
-  - Microsoft.EntityFrameworkCore.Design (9.0.10)
-  - Microsoft.EntityFrameworkCore.Tools (9.0.10)
-  - Npgsql.EntityFrameworkCore.PostgreSQL (9.0.4)
-  - Serilog.AspNetCore (9.0.0)
-  - Serilog.Sinks.Console (6.0.0)
-  - Serilog.Sinks.File (7.0.0)
-  - Swashbuckle.AspNetCore (9.0.6)
-  - System.IdentityModel.Tokens.Jwt (8.14.0)
+- `src/MiniPOS.API/MiniPOS.API.csproj`
+   - AutoMapper (12.0.1)
+   - AutoMapper.Extensions.Microsoft.DependencyInjection (12.0.1)
+   - Microsoft.AspNetCore.Authentication.JwtBearer (9.0.10)
+   - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.10)
+   - Microsoft.EntityFrameworkCore.Design (9.0.10)
+   - Microsoft.EntityFrameworkCore.Tools (9.0.10)
+   - Npgsql.EntityFrameworkCore.PostgreSQL (9.0.4)
+   - Serilog.AspNetCore (9.0.0)
+   - Serilog.Sinks.Console (6.0.0)
+   - Serilog.Sinks.File (7.0.0)
+   - Swashbuckle.AspNetCore (9.0.6)
+   - System.IdentityModel.Tokens.Jwt (8.14.0)
 
- - `src/MiniPOS.API.Application/MiniPOS.API.Application.csproj`
-  - AutoMapper (12.0.1)
-  - AutoMapper.Extensions.Microsoft.DependencyInjection (12.0.1)
-  - Microsoft.AspNetCore.Authentication.JwtBearer (9.0.10)
-  - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.10)
-  - Microsoft.EntityFrameworkCore.Design (9.0.10)
-  - Microsoft.EntityFrameworkCore.Tools (9.0.10)
-  - Npgsql.EntityFrameworkCore.PostgreSQL (9.0.4)
-  - Swashbuckle.AspNetCore (9.0.6)
-  - System.IdentityModel.Tokens.Jwt (8.14.0)
+- `src/MiniPOS.API.Application/MiniPOS.API.Application.csproj`
+   - AutoMapper (12.0.1)
+   - AutoMapper.Extensions.Microsoft.DependencyInjection (12.0.1)
+   - Microsoft.AspNetCore.Authentication.JwtBearer (9.0.10)
+   - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.10)
+   - Microsoft.EntityFrameworkCore.Design (9.0.10)
+   - Microsoft.EntityFrameworkCore.Tools (9.0.10)
+   - Npgsql.EntityFrameworkCore.PostgreSQL (9.0.4)
+   - Swashbuckle.AspNetCore (9.0.6)
+   - System.IdentityModel.Tokens.Jwt (8.14.0)
 
- - `src/MiniPOS.API.Domain/MiniPOS.API.Domain.csproj`
-  - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.10)
-  - Microsoft.EntityFrameworkCore.Design (9.0.10)
-  - Microsoft.EntityFrameworkCore.Tools (9.0.10)
-  - Npgsql.EntityFrameworkCore.PostgreSQL (9.0.4)
+- `src/MiniPOS.API.Domain/MiniPOS.API.Domain.csproj`
+   - Microsoft.AspNetCore.Identity.EntityFrameworkCore (9.0.10)
+   - Microsoft.EntityFrameworkCore.Design (9.0.10)
+   - Microsoft.EntityFrameworkCore.Tools (9.0.10)
+   - Npgsql.EntityFrameworkCore.PostgreSQL (9.0.4)
 
 - `src/MiniPOS.API.Common/MiniPOS.API.Common.csproj`
    - (no external NuGet packages)

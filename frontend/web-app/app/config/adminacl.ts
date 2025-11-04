@@ -7,6 +7,7 @@ import {
     Shield,
     Settings,
     Tags,
+    BarChart3,
 } from "lucide-react";
 
 export interface SidebarItem {
@@ -96,6 +97,17 @@ export const sidebarGroups: SidebarGroup[] = [
                 href: "/dashboard/settings",
                 icon: Settings, // ⚙️ global admin settings
                 permission: "Settings.View",
+            },
+        ],
+    },
+    {
+        title: "Reports",
+        items: [
+            {
+                title: "Sales by Product",
+                href: "/dashboard/reports/sales-by-product",
+                icon: BarChart3,
+                permission: "Orders.View",
             },
         ],
     },

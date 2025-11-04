@@ -15,7 +15,8 @@ RUN dotnet publish ./src/MiniPOS.API/MiniPOS.API.csproj -c Release -o /app/publi
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
-EXPOSE 80
+# ASP.NET images listen on 8080 by default
+EXPOSE 8080
 COPY --from=build /app/publish ./
 ENTRYPOINT ["dotnet", "MiniPOS.API.dll"]
 

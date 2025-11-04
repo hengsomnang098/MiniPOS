@@ -13,7 +13,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+        const baseUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
+        if (!baseUrl) {
+          throw new Error("API base URL is not configured. Set API_URL or NEXT_PUBLIC_API_URL.");
+        }
+        const res = await fetch(`${baseUrl}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(credentials),

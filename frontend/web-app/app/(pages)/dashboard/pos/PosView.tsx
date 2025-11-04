@@ -187,7 +187,7 @@ export default function PosView({ initialProducts, shopId, categories }: PosView
 
         {/* Product Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-          {result.items.map((p) => (
+          {result.items.map((p, idx) => (
             <Card key={p.id} className="hover:shadow-sm transition">
               <CardContent className="p-3 space-y-2">
                 <div className="relative w-full aspect-square rounded overflow-hidden bg-gray-50">
@@ -195,6 +195,10 @@ export default function PosView({ initialProducts, shopId, categories }: PosView
                     src={p.imageUrl || "/Images/placeholder.png"}
                     alt={p.name}
                     fill
+                    /* Mark the first image as priority to improve LCP when it is above the fold */
+                    priority={idx === 0}
+                    /* Provide responsive sizes for images using fill to optimize loading */
+                    sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
                     className="object-cover"
                   />
                 </div>
@@ -243,9 +247,11 @@ export default function PosView({ initialProducts, shopId, categories }: PosView
                       <Image
                         src={i.imageUrl || "/Images/placeholder.png"}
                         alt={i.name}
-                        fill
-                        className="object-cover"
-                        loading="lazy"
+                        priority
+                        width={100}
+                        height={100}
+                        className="object-cover aspect-auto"
+                        // loading="lazy"
                       />
                     </div>
                     <div className="flex-1">

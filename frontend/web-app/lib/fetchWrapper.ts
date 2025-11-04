@@ -1,7 +1,7 @@
 // utils/fetch-wrapper.ts
 import { auth } from "@/app/auth";
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+const baseUrl = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "");
 
 /**
  * Maps HTTP status codes to error codes

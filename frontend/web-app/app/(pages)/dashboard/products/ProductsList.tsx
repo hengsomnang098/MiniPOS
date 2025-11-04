@@ -192,6 +192,7 @@ export default function ProductsList({ initialProducts, shopId }: ProductsListPr
         data={products}
         columns={[
           { key: "name", label: "Product Name" },
+          {key:"barcode", label:"Barcode"},
           { key: "description", label: "Description" },
           { key: "categoryName", label: "Category" },
           { key: "serviceName", label: "Service Name" },
@@ -208,7 +209,6 @@ export default function ProductsList({ initialProducts, shopId }: ProductsListPr
                 width={90}
                 height={90}
                 className="object-cover rounded-md border"
-                loading="lazy"
                 placeholder="blur"
                 blurDataURL="/images/placeholder.png"
               />

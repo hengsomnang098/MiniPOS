@@ -1,31 +1,57 @@
 services:
-  # api:
-  #   image: hengsomnang/minipos-api:latest
-  #   build:
-  #     context: .
-  #     dockerfile: src/MiniPOS.API/Dockerfile
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - ConnectionStrings__DefaultConnection=Host=postgres;Database=minipos;Username=postgres;Password=postgrespw
-  #     - JwtSettings__Key=YourSuperSecretKey123456789012345678901234567890123456789
-  #     - JwtSettings__Issuer=MiniPOSAPI
-  #     - JwtSettings__Audience=MiniPOSAPIClient
-  #     - JwtSettings__DurationInMinutes=60
-  #     # - Serilog__MinimumLevel__Default=Information
-  #     # - Serilog__MinimumLevel__Override__Microsoft=Warning
-  #     # - Serilog__MinimumLevel__Override__System=Warning
-  #     # - Serilog__WriteTo__0__Name=File
-  #     # - Serilog__WriteTo__0__Args__path=/app/logs/log-.txt
-  #     # - Serilog__WriteTo__0__Args__rollingInterval=Day
-  #     # - Serilog__WriteTo__0__Args__outputTemplate={Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}
-  #   ports:
-  #     - "7001:8080"
-  #   # volumes:
-  #   #   - logs:/app/logs
-  #   #   - keys:/root/.aspnet/DataProtection-Keys
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+  api:
+    image: hengsomnang/minipos-api:latest
+    build:
+      context: .
+      dockerfile: src/MiniPOS.API/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=minipos;Username=postgres;Password=postgrespw
+      - JwtSettings__Key=YourSuperSecretKey123456789012345678901234567890123456789
+      - JwtSettings__Issuer=MiniPOSAPI
+      - JwtSettings__Audience=MiniPOSAPIClient
+      - JwtSettings__DurationInMinutes=60
+      - BunnyCdn__StorageZoneName=hengsomnang
+      - BunnyCdn__AccessKey=72c7fa5b-cc98-466d-841989d51269-85b2-4641
+      - BunnyCdn__RegionUrl=https://sg.storage.bunnycdn.com
+      - BunnyCdn__CdnBaseUrl=https://techhl.b-cdn.net
+      # - Serilog__MinimumLevel__Default=Information
+      # - Serilog__MinimumLevel__Override__Microsoft=Warning
+      # - Serilog__MinimumLevel__Override__System=Warning
+      # - Serilog__WriteTo__0__Name=File
+      # - Serilog__WriteTo__0__Args__path=/app/logs/log-.txt
+      # - Serilog__WriteTo__0__Args__rollingInterval=Day
+      # - Serilog__WriteTo__0__Args__outputTemplate={Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}
+    ports:
+      - "7001:80"
+    # volumes:
+      # - logs:/app/logs
+      # - keys:/root/.aspnet/DataProtection-Keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+  web-app:
+    image: hengsomnang/minipos-web:latest
+    build:
+      context: .
+      dockerfile: frontend/web-app/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://api:80"
+        NEXT_PUBLIC_API_BASE_URL: "http://api:80"
+    volumes:
+      - /var/lib/web/data
+    environment:
+      NODE_ENV: production
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: 0yRPmJyYCt0fmkX0OIHEWkHgli00x7LOAfm9+Vg3WGE=
+      # API base for server and client
+      API_URL: http://api:80
+      NEXT_PUBLIC_API_URL: http://api:80
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
 
   postgres:
     image: postgres
@@ -34,7 +60,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - /var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
